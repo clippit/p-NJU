@@ -72,10 +72,18 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         return menu
 
     def OnAbout(self, event):
-        print "about"
+        info = wx.AboutDialogInfo()
+        info.SetName('pNJU')
+        info.SetVersion('0.9')
+        info.SetDescription(u"南京大学校园网连接助手")
+        info.SetWebSite('http://pnju.dayanjia.com')
+        info.AddDeveloper('Clippit')
+        wx.AboutBox(info)
 
     def OnPreference(self, event):
-        print "preference"
+        prefDialog = PreferenceDialog(None)
+        prefDialog.ShowModal()
+        prefDialog.Destroy()
 
     def OnOnline(self, event):
         if self.online:
@@ -87,3 +95,49 @@ class MainTaskBarIcon(wx.TaskBarIcon):
     def OnExit(self, event):
         self.RemoveIcon()
         self.frame.Close()
+
+
+class PreferenceDialog(wx.Dialog):
+    def __init__(self, *args, **kwargs):
+        super(PreferenceDialog, self).__init__(*args, **kwargs)
+
+        self.InitUI()
+        self.SetSize((250, 200))
+        self.SetTitle(u"偏好设置")
+
+    def InitUI(self):
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        panel = wx.Panel(self)
+        prefSizer = wx.BoxSizer(wx.VERTICAL)
+
+        usernameBox = wx.BoxSizer(wx.HORIZONTAL)
+        usernameBox.Add(wx.StaticText(panel, label=u'用户名', style=wx.ALIGN_RIGHT))
+        usernameBox.Add(wx.TextCtrl(panel), border=5)
+        prefSizer.Add(usernameBox)
+
+        passwordBox = wx.BoxSizer(wx.HORIZONTAL)
+        passwordBox.Add(wx.StaticText(panel, label=u'密码', style=wx.ALIGN_RIGHT))
+        passwordBox.Add(wx.TextCtrl(panel), flag=wx.TE_PASSWORD, border=5)
+        prefSizer.Add(passwordBox)
+
+        autoConnectCheckBox = wx.CheckBox(panel, label=u'在校园网内自动连接（暂未实现）')
+        prefSizer.Add(autoConnectCheckBox)
+
+        statisticCheckBox = wx.CheckBox(panel, label=u'帮助改善本程序')
+        prefSizer.Add(statisticCheckBox)
+
+        panel.SetSizer(prefSizer)
+
+        btnSizer = wx.StdDialogButtonSizer()
+
+        okButton = wx.Button(self, wx.ID_OK, u"确定")
+        okButton.SetDefault()
+        cancelButton = wx.Button(self, wx.ID_CANCEL, u"取消")
+        btnSizer.AddButton(okButton)
+        btnSizer.AddButton(cancelButton)
+        btnSizer.Realize()
+
+        sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=5)
+        sizer.Add(btnSizer, flag=wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, border=10)
+        self.SetSizer(sizer)
