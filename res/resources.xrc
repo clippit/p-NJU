@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resource version="2.3.0.1" xmlns="http://www.wxwindows.org/wxxrc">
+  <object class="wxDialog" name="prefDialog">
+    <object class="wxBoxSizer">
+      <orient>wxVERTICAL</orient>
+      <object class="sizeritem">
+        <object class="wxPanel" name="panel">
+          <object class="wxBoxSizer">
+            <orient>wxVERTICAL</orient>
+            <object class="sizeritem">
+              <option>1</option>
+              <flag>wxEXPAND</flag>
+              <border>5</border>
+              <object class="wxFlexGridSizer">
+                <rows>0</rows>
+                <cols>2</cols>
+                <vgap>0</vgap>
+                <hgap>0</hgap>
+                <growablecols/>
+                <growablerows/>
+                <object class="sizeritem">
+                  <option>0</option>
+                  <flag>wxALL</flag>
+                  <border>5</border>
+                  <object class="wxStaticText" name="usernameLabel">
+                    <style>wxALIGN_RIGHT</style>
+                    <label>用户名</label>
+                    <wrap>-1</wrap>
+                  </object>
+                </object>
+                <object class="sizeritem">
+                  <option>0</option>
+                  <flag>wxALL</flag>
+                  <border>5</border>
+                  <object class="wxTextCtrl" name="usernameTextCtrl">
+                    <value/>
+                    <maxlength>0</maxlength>
+                  </object>
+                </object>
+                <object class="sizeritem">
+                  <option>0</option>
+                  <flag>wxALL</flag>
+                  <border>5</border>
+                  <object class="wxStaticText" name="passwordLabel">
+                    <style>wxALIGN_RIGHT</style>
+                    <label>密码</label>
+                    <wrap>-1</wrap>
+                  </object>
+                </object>
+                <object class="sizeritem">
+                  <option>0</option>
+                  <flag>wxALL</flag>
+                  <border>5</border>
+                  <object class="wxTextCtrl" name="passwordTextCtrl">
+                    <style>wxTE_PASSWORD</style>
+                    <value/>
+                    <maxlength>0</maxlength>
+                  </object>
+                </object>
+              </object>
+            </object>
+            <object class="sizeritem">
+              <option>0</option>
+              <flag>wxALL</flag>
+              <border>5</border>
+              <object class="wxCheckBox" name="autoConnectCheckBox">
+                <enabled>0</enabled>
+                <label>在校园网内自动连接（尚未实现）</label>
+                <checked>0</checked>
+              </object>
+            </object>
+            <object class="sizeritem">
+              <option>0</option>
+              <flag>wxALL</flag>
+              <border>5</border>
+              <object class="wxCheckBox" name="statisticsCheckBox">
+                <label>帮助改进该程序</label>
+                <checked>0</checked>
+              </object>
+            </object>
+          </object>
+          <style>wxTAB_TRAVERSAL</style>
+        </object>
+        <option>2</option>
+        <flag>wxEXPAND</flag>
+        <border>5</border>
+      </object>
+      <object class="sizeritem">
+        <option>1</option>
+        <flag>wxEXPAND</flag>
+        <border>5</border>
+        <object class="wxStdDialogButtonSizer">
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_OK">
+              <label>确定</label>
+            </object>
+          </object>
+          <object class="button">
+            <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+            <border>5</border>
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>取消</label>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+    <title>偏好设置</title>
+    <centered>1</centered>
+    <style>wxDEFAULT_DIALOG_STYLE</style>
+  </object>
+</resource>

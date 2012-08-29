@@ -1,8 +1,6 @@
-import wx
-from ui import MainFrame
+from ui import MainApp
 
 
 def main():
-    app = wx.App(False)
-    MainFrame(None)
+    app = MainApp(False)
     app.MainLoop()
