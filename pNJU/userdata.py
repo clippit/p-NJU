@@ -26,7 +26,7 @@ class Preference(object):
         pref = ConfigParser.ConfigParser()
         pref.add_section('login')
         pref.set('login', self.fields['username'], kwargs['username'])
-        pref.set('login', self.fields['password'], kwargs['password'])
+        pref.set('login', self.fields['password'], EncryptPassword(kwargs['password']))
         pref.add_section('options')
         pref.set('options', self.fields['autoConnectEnabled'], kwargs['autoConnectEnabled'])
         pref.set('options', self.fields['statisticsEnabled'], kwargs['statisticsEnabled'])
@@ -56,7 +56,7 @@ class Preference(object):
             pref.read(self.filename)
             return dict(
                 username=pref.get('login', self.fields['username']),
-                password=pref.get('login', self.fields['password']),
+                password=DecryptPassword(pref.get('login', self.fields['password'])),
                 autoConnectEnabled=pref.getboolean('options', self.fields['autoConnectEnabled']),
                 statisticsEnabled=pref.getboolean('options', self.fields['statisticsEnabled']),
             )
@@ -76,3 +76,11 @@ class Preference(object):
             os.mkdir(directory)
 
         return directory
+
+
+def EncryptPassword(toBeEncrypted):
+    return toBeEncrypted.encode('base64').encode('rot13')
+
+
+def DecryptPassword(toBeDecrypted):
+    return toBeDecrypted.decode('rot13').decode('base64')
