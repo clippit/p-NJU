@@ -2,6 +2,7 @@
 from os.path import dirname, join
 import wx
 from wx import xrc
+from userdata import Preference
 
 # Resource Directory
 res_path = join(dirname(dirname(__file__)), "res")
@@ -63,6 +64,7 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         self.Bind(wx.EVT_MENU, self.OnExit, id=self.TBMENU_EXIT)
 
         self.online = False
+        self.pref = Preference()
 
     def MakeIcon(self, status="offline"):
         if status not in ('online', 'offline'):
@@ -102,14 +104,22 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         prefDialog = xrc.XmlResource.Get().LoadDialog(None, 'prefDialog')
         usernameTextCtrl = xrc.XRCCTRL(prefDialog, 'usernameTextCtrl')
         passwordTextCtrl = xrc.XRCCTRL(prefDialog, 'passwordTextCtrl')
+        autoConnectCheckBox = xrc.XRCCTRL(prefDialog, 'autoConnectCheckBox')
+        statisticsCheckBox = xrc.XRCCTRL(prefDialog, 'statisticsCheckBox')
+
+        usernameTextCtrl.SetValue(self.pref.Get('username'))
+        passwordTextCtrl.SetValue(self.pref.Get('password'))
+        autoConnectCheckBox.SetValue(self.pref.Get('autoConnectEnabled'))
+        statisticsCheckBox.SetValue(self.pref.Get('statisticsEnabled'))
+
         usernameTextCtrl.SetValidator(LoginValidator())
         passwordTextCtrl.SetValidator(LoginValidator())
 
         if prefDialog.ShowModal() == wx.ID_OK:
             username = usernameTextCtrl.GetValue()
             password = passwordTextCtrl.GetValue()
-            autoConnectEnabled = xrc.XRCCTRL(prefDialog, 'autoConnectCheckBox').GetValue()
-            statisticsEnabled = xrc.XRCCTRL(prefDialog, 'statisticsCheckBox').GetValue()
+            autoConnectEnabled = autoConnectCheckBox.GetValue()
+            statisticsEnabled = statisticsCheckBox.GetValue()
             self.SavePreference(username=username, password=password, autoConnectEnabled=autoConnectEnabled, statisticsEnabled=statisticsEnabled)
 
         prefDialog.Destroy()
@@ -128,9 +138,14 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         self.frame.Close()
 
     def SavePreference(self, *args, **kwargs):
-        from userdata import Preference
-        pref = Preference(**kwargs)
-        pref.save()
+        try:
+            self.pref.Save(**kwargs)
+        except Exception as e:
+            wx.MessageBox(
+                u"保存设置失败！\n" + e.message,
+                u"错误",
+                wx.OK | wx.ICON_ERROR
+            )
 
 
 class LoginValidator(wx.PyValidator):

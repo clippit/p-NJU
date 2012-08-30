@@ -1,0 +1,2 @@
+APP_NAME = "pNJU"
+PREFERENCE_FILENAME = 'preference'
