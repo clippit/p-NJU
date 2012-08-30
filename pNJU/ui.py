@@ -3,10 +3,12 @@ from os.path import dirname, join
 import wx
 from wx import xrc
 
+# Resource Directory
+res_path = join(dirname(dirname(__file__)), "res")
+
 
 class MainApp(wx.App):
     def OnInit(self):
-        res_path = join(dirname(dirname(__file__)), "res")
         xrc.XmlResource.Get().LoadFile(join(res_path, "resources.xrc"))
         self.frame = MainFrame(None)
         return True
@@ -48,7 +50,12 @@ class MainTaskBarIcon(wx.TaskBarIcon):
     def __init__(self, frame):
         super(MainTaskBarIcon, self).__init__(wx.TBI_CUSTOM_STATUSITEM)
         self.frame = frame
-        self.SetIcon(self.MakeIcon(), u'pNJU测试')
+
+        self.icons = {
+            'online': wx.Image(join(res_path, 'icon-online.png'), wx.BITMAP_TYPE_PNG),
+            'offline': wx.Image(join(res_path, 'icon-offline.png'), wx.BITMAP_TYPE_PNG)
+        }
+        self.SetIcon(self.MakeIcon(), u'pNJU - 离线')
 
         self.Bind(wx.EVT_MENU, self.OnAbout, id=self.TBMENU_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnPreference, id=self.TBMENU_PREFERENCE)
@@ -57,16 +64,17 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.online = False
 
-    def MakeIcon(self):
-        bmp = wx.EmptyBitmap(16, 16)
-        dc = wx.MemoryDC(bmp)
-        dc.SetBrush(wx.RED_BRUSH)
-        dc.Clear()
-        dc.SelectObject(wx.NullBitmap)
+    def MakeIcon(self, status="offline"):
+        if status not in ('online', 'offline'):
+            status = 'offline'
 
-        testicon = wx.EmptyIcon()
-        testicon.CopyFromBitmap(bmp)
-        return testicon
+        image = self.icons[status]
+        if "wxMSW" in wx.PlatformInfo:
+            image = image.Scale(16, 16)
+        elif "wxGTK" in wx.PlatformInfo:
+            image = image.Scale(22, 22)
+
+        return wx.IconFromBitmap(image.ConvertToBitmap())
 
     def CreatePopupMenu(self):
         menu = wx.Menu()
@@ -103,8 +111,10 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
     def OnOnline(self, event):
         if self.online:
+            self.SetIcon(self.MakeIcon('offline'), u'pNJU - 离线')
             print 'turn offline'
         else:
+            self.SetIcon(self.MakeIcon('online'), u'pNJU - 在线')
             print 'turn online'
         self.online = not self.online
 
