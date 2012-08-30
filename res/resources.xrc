@@ -29,13 +29,12 @@
                   </object>
                 </object>
                 <object class="sizeritem">
+                  <object class="wxTextCtrl" name="usernameTextCtrl">
+                    <maxlength>0</maxlength>
+                  </object>
                   <option>0</option>
                   <flag>wxALL</flag>
                   <border>5</border>
-                  <object class="wxTextCtrl" name="usernameTextCtrl">
-                    <value/>
-                    <maxlength>0</maxlength>
-                  </object>
                 </object>
                 <object class="sizeritem">
                   <option>0</option>
@@ -110,5 +109,6 @@
     <title>偏好设置</title>
     <centered>1</centered>
     <style>wxDEFAULT_DIALOG_STYLE</style>
+    <exstyle>wxWS_EX_VALIDATE_RECURSIVELY</exstyle>
   </object>
 </resource>

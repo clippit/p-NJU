@@ -100,13 +100,18 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
     def OnPreference(self, event):
         prefDialog = xrc.XmlResource.Get().LoadDialog(None, 'prefDialog')
+        usernameTextCtrl = xrc.XRCCTRL(prefDialog, 'usernameTextCtrl')
+        passwordTextCtrl = xrc.XRCCTRL(prefDialog, 'passwordTextCtrl')
+        usernameTextCtrl.SetValidator(LoginValidator())
+        passwordTextCtrl.SetValidator(LoginValidator())
+
         if prefDialog.ShowModal() == wx.ID_OK:
-            print 'ok'  # Read preferences and save
-            username = xrc.XRCCTRL(prefDialog, 'usernameTextCtrl').GetValue()
-            password = xrc.XRCCTRL(prefDialog, 'passwordTextCtrl').GetValue()
+            username = usernameTextCtrl.GetValue()
+            password = passwordTextCtrl.GetValue()
             autoConnectEnabled = xrc.XRCCTRL(prefDialog, 'autoConnectCheckBox').GetValue()
             statisticsEnabled = xrc.XRCCTRL(prefDialog, 'statisticsCheckBox').GetValue()
-            print username, password, autoConnectEnabled, statisticsEnabled
+            self.SavePreference(username=username, password=password, autoConnectEnabled=autoConnectEnabled, statisticsEnabled=statisticsEnabled)
+
         prefDialog.Destroy()
 
     def OnOnline(self, event):
@@ -121,3 +126,34 @@ class MainTaskBarIcon(wx.TaskBarIcon):
     def OnExit(self, event):
         self.RemoveIcon()
         self.frame.Close()
+
+    def SavePreference(self, *args, **kwargs):
+        from userdata import Preference
+        pref = Preference(**kwargs)
+        pref.save()
+
+
+class LoginValidator(wx.PyValidator):
+    def Clone(self):
+        return LoginValidator()
+
+    def Validate(self, win):
+        textCtrl = self.GetWindow()
+        text = textCtrl.GetValue()
+
+        if len(text) == 0:
+            wx.MessageBox(u"用户名和密码必须填写！", u"错误", wx.OK | wx.ICON_EXCLAMATION)
+            textCtrl.SetBackgroundColour("pink")
+            textCtrl.SetFocus()
+            textCtrl.Refresh()
+            return False
+        else:
+            textCtrl.SetBackgroundColour(wx.SystemSettings_GetColour(wx.SYS_COLOUR_WINDOW))
+            textCtrl.Refresh()
+            return True
+
+    def TransferToWindow(self):
+        return True  # Prevent wxDialog from complaining.
+
+    def TransferFromWindow(self):
+        return True  # Prevent wxDialog from complaining.
