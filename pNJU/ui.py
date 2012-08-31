@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from os.path import dirname, join
+import string
 import wx
 from wx import xrc
 from userdata import Preference
+from connection import ConnectionManager, ConnectionException
 
 # Resource Directory
 res_path = join(dirname(dirname(__file__)), "res")
@@ -63,8 +65,8 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         self.Bind(wx.EVT_MENU, self.OnOnline, id=self.TBMENU_ONLINE)
         self.Bind(wx.EVT_MENU, self.OnExit, id=self.TBMENU_EXIT)
 
-        self.online = False
         self.pref = Preference()
+        self.connection = ConnectionManager()
 
     def MakeIcon(self, status="offline"):
         if status not in ('online', 'offline'):
@@ -86,7 +88,7 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         onlineItem = menu.AppendCheckItem(self.TBMENU_ONLINE, u"连接")
         menu.Append(self.TBMENU_EXIT, u"退出")
 
-        if self.online:
+        if self.connection.IsOnline():
             onlineItem.Check()
 
         return menu
@@ -125,13 +127,10 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         prefDialog.Destroy()
 
     def OnOnline(self, event):
-        if self.online:
-            self.SetIcon(self.MakeIcon('offline'), u'pNJU - 离线')
-            print 'turn offline'
+        if not self.connection.IsOnline():  # offline
+            self.DoOnline()
         else:
-            self.SetIcon(self.MakeIcon('online'), u'pNJU - 在线')
-            print 'turn online'
-        self.online = not self.online
+            self.DoOffline()
 
     def OnExit(self, event):
         self.RemoveIcon()
@@ -146,6 +145,42 @@ class MainTaskBarIcon(wx.TaskBarIcon):
                 u"错误",
                 wx.OK | wx.ICON_ERROR
             )
+
+    def DoOnline(self):
+        try:
+            self.connection.DoOnline()
+            self.SetIcon(self.MakeIcon('online'), u'pNJU - 在线')
+        except ConnectionException as e:
+            print 'connection failed'
+            print e.message
+        except:
+            raise
+
+    def DoOffline(self):
+        try:
+            if self.connection.DoOffline():
+                if "wxMSW" in wx.PlatformInfo:
+                    self.ShowBalloon("pNJU", u"下线成功")
+        except ConnectionException as e:
+            if "wxMSW" in wx.PlatformInfo:
+                self.ShowBalloon(u"pNJU 下线失败", e.message)
+        finally:
+            self.UpdateIcon()
+
+    def UpdateIcon(self, info=None):
+        if self.connection.IsOnline():
+            status = u"在线"
+            icon = 'online'
+        else:
+            status = u"离线"
+            icon = 'offline'
+
+        if info == None:
+            tooltip = string.join(("pNJU", status), " - ")
+        else:
+            tooltip = string.join(("pNJU", status, info), " - ")
+
+        self.SetIcon(self.MakeIcon(icon), tooltip)
 
 
 class LoginValidator(wx.PyValidator):

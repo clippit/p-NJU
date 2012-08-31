@@ -70,22 +70,36 @@ class Session(object):
     def __init__(self):
         super(Session, self).__init__()
         self.filename = os.path.join(FindDirectory(), config.SESSION_FILENAME)
+        self.cookie = None
+        self.captcha = None
 
-    def Save(self, cookie, captcha):
-        data = {"cookie": cookie, "captcha": captcha}
+    def Save(self, cookie=None, captcha=None):
+        if cookie:
+            self.cookie = cookie
+        if captcha:
+            self.captcha = captcha
+
+        data = {"cookie": self.cookie, "captcha": self.captcha}
         try:
             with open(self.filename, 'w+b') as output:
                 cPickle.dump(data, output)
         except:
             pass
 
-    def Load(self):
-        try:
-            with open(self.filename, 'rb') as input:
-                data = cPickle.load(input)
-            return data['cookie'], data['captcha']
-        except:
-            return '', ''
+    def Load(self, force=False):
+        if not all((self.cookie, self.captcha)):
+            force = True
+
+        if force:
+            try:
+                with open(self.filename, 'rb') as input:
+                    data = cPickle.load(input)
+                    self.cookie = data['cookie']
+                    self.captcha = data['captcha']
+            except:
+                return None, None
+
+        return self.cookie, self.captcha
 
 
 def FindDirectory():
