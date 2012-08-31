@@ -1,31 +1,69 @@
 # -*- coding: utf-8 -*-
 from userdata import Session
 from contextlib import closing
-import cookielib
+from urllib import urlencode
 import urllib2
 import re
+import cStringIO
 import config
 
 
 class ConnectionManager(object):
     INFO_SESSION_ERROR = 0
+    INFO_ONLINE_SUCCESSFUL = 100
+    INFO_PASSWORF_INVALID = 101
+    INFO_CAPTCHA_INVALID = 102
+    INFO_SIMULTANEITY = 103
     INFO_OFFLINE_SUCCESSFUL = 200
     INFO_ALREADY_OFFLINE = 201
     infoTable = {
+        u'登录成功!': INFO_ONLINE_SUCCESSFUL,
+        u'E010 您输入的密码无效!': INFO_PASSWORF_INVALID,
+        u'验证码错误!': INFO_CAPTCHA_INVALID,
+        u'E002 您的登录数已达最大并发登录数!': INFO_SIMULTANEITY,
         u'下线成功': INFO_OFFLINE_SUCCESSFUL,
         u'您已下线!': INFO_ALREADY_OFFLINE,
     }
 
     def __init__(self):
         super(ConnectionManager, self).__init__()
-        self.session = Session()
+        #self.session = Session()
         self.online = False
 
-    def IsOnline(self):
-        return self.online
+    def IsOnline(self, force=False):
+        return self.UpdateStatus() if force else self.online
 
-    def DoOnline(self):
-        self.online = True
+    def DoOnline(self, username, password, captcha):
+        postdata = {
+            'action': 'login',
+            'url': 'http://p.nju.edu.cn',
+            'p_login': 'p_login',
+            'login_username': username,
+            'login_password': password,
+            'login_code': captcha
+        }
+        request = urllib2.Request(config.URL, urlencode(postdata))
+        request.add_header('User-Agent', config.USER_AGENT)
+        request.add_header('Cookie', "portalservice={0}".format(config.SESSION_ID))
+        try:
+            with closing(urllib2.urlopen(request)) as page:
+                response = self.ParseResponse(page.read().decode('utf-8'))
+        except Exception as e:
+            raise ConnectionException(e.message)
+
+        if response == self.INFO_ONLINE_SUCCESSFUL:
+            self.online = True
+            return True
+        elif response == self.INFO_PASSWORF_INVALID:
+            raise ConnectionException(u"用户名或密码错误，请至设置窗口修改")
+        elif response == self.INFO_CAPTCHA_INVALID:
+            raise CaptchaException
+        elif response == self.INFO_SIMULTANEITY:
+            raise ConnectionException(u"同一帐号已在别处登录，请至http://bras.nju.edu.cn手动下线")
+        elif response == self.INFO_SESSION_ERROR:
+            raise ConnectionException(u"会话超时，请重试")
+        else:
+            raise ConnectionException(response)
 
     def DoOffline(self):
         request = urllib2.Request(config.URL, "action=disconnect")
@@ -43,15 +81,43 @@ class ConnectionManager(object):
             self.online = False
             raise ConnectionException(u"已经处于离线状态")
         else:
-            raise ConnectionException(u"未知错误")
+            raise ConnectionException(response)
 
     def ParseResponse(self, r):
         match = re.search(ur"alert\('([^']+)'\);", r)
         if match is None:
             return self.INFO_SESSION_ERROR
-        return self.infoTable[match.group(1)]
+        error = match.group(1)
+        if error in self.infoTable:
+            return self.infoTable[error]
+        else:
+            return u"未知错误！" + error
+
+    def GetCaptchaImage(self):
+        request = urllib2.Request(config.IMG_URL)
+        request.add_header('User-Agent', config.USER_AGENT)
+        request.add_header('Cookie', "portalservice={0}".format(config.SESSION_ID))
+        try:
+            with closing(urllib2.urlopen(request)) as image:
+                response = image.read()
+            output = cStringIO.StringIO(response)
+            return output
+        except Exception as e:
+            raise ConnectionException(e.message)
+
+    def UpdateStatus(self):
+        with closing(urllib2.urlopen(config.URL)) as page:
+            html = page.read().decode('utf-8')
+        if u'在线时长' in html:
+            self.online = True
+        else:
+            self.online = False
+        return self.online
 
 
 class ConnectionException(Exception):
-    def __init__(self, *args, **kwargs):
-        super(ConnectionException, self).__init__(*args, **kwargs)
+    pass
+
+
+class CaptchaException(ConnectionException):
+    pass

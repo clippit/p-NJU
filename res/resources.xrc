@@ -117,7 +117,7 @@
       <orient>wxVERTICAL</orient>
       <object class="sizeritem">
         <object class="wxStaticText">
-          <label>唉，我也很无奈:(</label>
+          <label>淡定，我也很无奈:(</label>
         </object>
         <option>1</option>
         <flag>wxEXPAND|wxALL</flag>
@@ -149,6 +149,11 @@
             <object class="wxButton" name="wxID_OK">
               <label>确定</label>
               <default>1</default>
+            </object>
+          </object>
+          <object class="button">
+            <object class="wxButton" name="wxID_CANCEL">
+              <label>取消</label>
             </object>
           </object>
         </object>

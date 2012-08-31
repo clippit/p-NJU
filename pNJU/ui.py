@@ -4,7 +4,7 @@ import string
 import wx
 from wx import xrc
 from userdata import Preference
-from connection import ConnectionManager, ConnectionException
+from connection import ConnectionManager, ConnectionException, CaptchaException
 
 # Resource Directory
 res_path = join(dirname(dirname(__file__)), "res")
@@ -58,7 +58,6 @@ class MainTaskBarIcon(wx.TaskBarIcon):
             'online': wx.Image(join(res_path, 'icon-online.png'), wx.BITMAP_TYPE_PNG),
             'offline': wx.Image(join(res_path, 'icon-offline.png'), wx.BITMAP_TYPE_PNG)
         }
-        self.SetIcon(self.MakeIcon(), u'pNJU - 离线')
 
         self.Bind(wx.EVT_MENU, self.OnAbout, id=self.TBMENU_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnPreference, id=self.TBMENU_PREFERENCE)
@@ -67,6 +66,7 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.pref = Preference()
         self.connection = ConnectionManager()
+        self.UpdateIcon(force=True)
 
     def MakeIcon(self, status="offline"):
         if status not in ('online', 'offline'):
@@ -147,14 +147,26 @@ class MainTaskBarIcon(wx.TaskBarIcon):
             )
 
     def DoOnline(self):
-        try:
-            self.connection.DoOnline()
-            self.SetIcon(self.MakeIcon('online'), u'pNJU - 在线')
-        except ConnectionException as e:
-            print 'connection failed'
-            print e.message
-        except:
-            raise
+        while True:
+            try:
+                if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), self.GetCaptcha()):
+                    if "wxMSW" in wx.PlatformInfo:
+                        self.ShowBalloon("pNJU", u"登录成功")
+            except CancelLoginException:
+                return
+            except CaptchaException:
+                if "wxMSW" in wx.PlatformInfo:
+                    self.ShowBalloon(u"pNJU 登录失败", u"验证码错误")
+                continue
+            except ConnectionException as e:
+                if "wxMSW" in wx.PlatformInfo:
+                    self.ShowBalloon(u"pNJU 登录失败", e.message)
+                break
+            except:
+                raise
+            else:
+                break
+        self.UpdateIcon()
 
     def DoOffline(self):
         try:
@@ -167,8 +179,26 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         finally:
             self.UpdateIcon()
 
-    def UpdateIcon(self, info=None):
-        if self.connection.IsOnline():
+    def GetCaptcha(self):
+        captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage()))
+        captchaDialog = xrc.XmlResource.Get().LoadDialog(None, 'captchaDialog')
+        captchaBitmap = xrc.XRCCTRL(captchaDialog, 'captchaBitmap')
+        captchaBitmap.SetBitmap(captchaImage)
+        captchaTextCtrl = xrc.XRCCTRL(captchaDialog, 'captchaTextCtrl')
+
+        if captchaDialog.ShowModal() == wx.ID_OK:
+            captcha = captchaTextCtrl.GetValue()
+            captchaDialog.Destroy()
+            if len(captcha) == 0:
+                raise CancelLoginException
+            else:
+                return captcha
+        else:
+            captchaDialog.Destroy()
+            raise CancelLoginException
+
+    def UpdateIcon(self, force=False, info=None):
+        if self.connection.IsOnline(force):
             status = u"在线"
             icon = 'online'
         else:
@@ -207,3 +237,7 @@ class LoginValidator(wx.PyValidator):
 
     def TransferFromWindow(self):
         return True  # Prevent wxDialog from complaining.
+
+
+class CancelLoginException(Exception):
+    pass
