@@ -1,2 +1,3 @@
 APP_NAME = "pNJU"
 PREFERENCE_FILENAME = 'preference'
+SESSION_FILENAME = 'session'

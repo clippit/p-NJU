@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import ConfigParser
+import cPickle
 import config
 
 
@@ -15,8 +17,7 @@ class Preference(object):
 
     def __init__(self):
         super(Preference, self).__init__()
-        self.directory = self.FindDirectory()
-        self.filename = os.path.join(self.directory, config.PREFERENCE_FILENAME)
+        self.filename = os.path.join(FindDirectory(), config.PREFERENCE_FILENAME)
         self.forceRefresh = True
 
     def Save(self, *args, **kwargs):
@@ -64,18 +65,41 @@ class Preference(object):
         except Exception:
             return defaults
 
-    def FindDirectory(self):
-        if sys.platform.startswith("win"):
-            directory = os.path.join(os.environ['APPDATA'], config.APP_NAME)
-        elif sys.platform == 'darwin':
-            directory = os.path.join(os.path.expanduser('~/Library/Application Support/'), config.APP_NAME)
-        else:
-            directory = os.path.join(os.getenv('XDG_CONFIG_HOME', os.path.expanduser("~/.config")), config.APP_NAME)
 
-        if not os.path.exists(directory):
-            os.mkdir(directory)
+class Session(object):
+    def __init__(self):
+        super(Session, self).__init__()
+        self.filename = os.path.join(FindDirectory(), config.SESSION_FILENAME)
 
-        return directory
+    def Save(self, cookie, captcha):
+        data = {"cookie": cookie, "captcha": captcha}
+        try:
+            with open(self.filename, 'w+b') as output:
+                cPickle.dump(data, output)
+        except:
+            pass
+
+    def Load(self):
+        try:
+            with open(self.filename, 'rb') as input:
+                data = cPickle.load(input)
+            return data['cookie'], data['captcha']
+        except:
+            return '', ''
+
+
+def FindDirectory():
+    if sys.platform.startswith("win"):
+        directory = os.path.join(os.environ['APPDATA'], config.APP_NAME)
+    elif sys.platform == 'darwin':
+        directory = os.path.join(os.path.expanduser('~/Library/Application Support/'), config.APP_NAME)
+    else:
+        directory = os.path.join(os.getenv('XDG_CONFIG_HOME', os.path.expanduser("~/.config")), config.APP_NAME)
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    return directory
 
 
 def EncryptPassword(toBeEncrypted):
