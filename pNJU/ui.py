@@ -67,7 +67,6 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.pref = Preference()
         self.connection = ConnectionManager()
-        self.autoRetry = True
         self.UpdateIcon(force=True)
 
     def MakeIcon(self, status="offline"):
@@ -120,11 +119,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         prefDialog = xrc.XmlResource.Get().LoadDialog(None, 'prefDialog')
         usernameTextCtrl = xrc.XRCCTRL(prefDialog, 'usernameTextCtrl')
         passwordTextCtrl = xrc.XRCCTRL(prefDialog, 'passwordTextCtrl')
+        autoRetryCheckBox = xrc.XRCCTRL(prefDialog, 'autoRetryCheckBox')
         autoConnectCheckBox = xrc.XRCCTRL(prefDialog, 'autoConnectCheckBox')
         statisticsCheckBox = xrc.XRCCTRL(prefDialog, 'statisticsCheckBox')
 
         usernameTextCtrl.SetValue(self.pref.Get('username'))
         passwordTextCtrl.SetValue(self.pref.Get('password'))
+        autoRetryCheckBox.SetValue(self.pref.Get('autoRetryEnabled'))
         autoConnectCheckBox.SetValue(self.pref.Get('autoConnectEnabled'))
         statisticsCheckBox.SetValue(self.pref.Get('statisticsEnabled'))
 
@@ -132,17 +133,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         passwordTextCtrl.SetValidator(LoginValidator())
 
         if prefDialog.ShowModal() == wx.ID_OK:
-            username = usernameTextCtrl.GetValue()
-            password = passwordTextCtrl.GetValue()
-            autoConnectEnabled = autoConnectCheckBox.GetValue()
-            statisticsEnabled = statisticsCheckBox.GetValue()
-            self.SavePreference(username=username, password=password, autoConnectEnabled=autoConnectEnabled, statisticsEnabled=statisticsEnabled)
+            self.SavePreference(
+                username=usernameTextCtrl.GetValue(),
+                password=passwordTextCtrl.GetValue(),
+                autoRetryEnabled=autoRetryCheckBox.GetValue(),
+                autoConnectEnabled=autoConnectCheckBox.GetValue(),
+                statisticsEnabled=statisticsCheckBox.GetValue()
+            )
 
         prefDialog.Destroy()
 
     def OnOnline(self, event):
-        if not self.connection.IsOnline():  # offline
-            if self.autoRetry:
+        if not self.connection.IsOnline():
+            # Check if username and password are set
+            if not all((self.pref.Get('username'), self.pref.Get('password'))):
+                wx.MessageBox(
+                    u'用户名密码尚未设置。',
+                    u"pNJU 错误",
+                    wx.OK | wx.ICON_EXCLAMATION
+                )
+                return self.ProcessEvent(wx.PyCommandEvent(wx.EVT_MENU.typeId, self.TBMENU_PREFERENCE))
+
+            if self.pref.Get('autoRetryEnabled'):
                 self.DoOnlineAutoRetry()
             else:
                 self.DoOnline()
@@ -186,8 +198,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         self.UpdateIcon()
 
     def DoOnlineAutoRetry(self):
+        try:
+            self.connection.GetCaptchaImage()  # In order to send our session id to server
+        except ConnectionException as e:
+            if "wxMSW" in wx.PlatformInfo:
+                self.ShowBalloon(u"pNJU 操作失败，请重试", e.message)
+            return
+
         retry = 10
-        self.connection.GetCaptchaImage()  # In order to send our session id to server
         while retry:
             try:
                 if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), retry % 10):

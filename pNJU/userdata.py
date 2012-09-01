@@ -12,7 +12,8 @@ class Preference(object):
         'username': 'username',
         'password': 'password',
         'autoConnectEnabled': 'auto_connect',
-        'statisticsEnabled': 'statistics'
+        'statisticsEnabled': 'statistics',
+        'autoRetryEnabled': 'solve_captcha'
     }
 
     def __init__(self):
@@ -29,6 +30,7 @@ class Preference(object):
         pref.set('login', self.fields['username'], kwargs['username'])
         pref.set('login', self.fields['password'], EncryptPassword(kwargs['password']))
         pref.add_section('options')
+        pref.set('options', self.fields['autoRetryEnabled'], kwargs['autoRetryEnabled'])
         pref.set('options', self.fields['autoConnectEnabled'], kwargs['autoConnectEnabled'])
         pref.set('options', self.fields['statisticsEnabled'], kwargs['statisticsEnabled'])
 
@@ -49,6 +51,7 @@ class Preference(object):
         defaults = dict(
             username="",
             password="",
+            autoRetryEnabled=True,
             autoConnectEnabled=False,
             statisticsEnabled=True,
         )
@@ -58,6 +61,7 @@ class Preference(object):
             return dict(
                 username=pref.get('login', self.fields['username']),
                 password=DecryptPassword(pref.get('login', self.fields['password'])),
+                autoRetryEnabled=pref.getboolean('options', self.fields['autoRetryEnabled']),
                 autoConnectEnabled=pref.getboolean('options', self.fields['autoConnectEnabled']),
                 statisticsEnabled=pref.getboolean('options', self.fields['statisticsEnabled']),
             )

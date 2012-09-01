@@ -15,15 +15,19 @@ class ConnectionManager(object):
     INFO_PASSWORF_INVALID = 101
     INFO_CAPTCHA_INVALID = 102
     INFO_SIMULTANEITY = 103
+    INFO_ALREADY_ONLINE = 104
     INFO_OFFLINE_SUCCESSFUL = 200
     INFO_ALREADY_OFFLINE = 201
+    INFO_SERVER_ERROR = 301
     infoTable = {
         u'登录成功!': INFO_ONLINE_SUCCESSFUL,
         u'E010 您输入的密码无效!': INFO_PASSWORF_INVALID,
         u'验证码错误!': INFO_CAPTCHA_INVALID,
         u'E002 您的登录数已达最大并发登录数!': INFO_SIMULTANEITY,
+        u'您已登录!': INFO_ALREADY_ONLINE,
         u'下线成功': INFO_OFFLINE_SUCCESSFUL,
         u'您已下线!': INFO_ALREADY_OFFLINE,
+        u'错误!请稍后再试!': INFO_SERVER_ERROR
     }
 
     def __init__(self):
@@ -61,9 +65,14 @@ class ConnectionManager(object):
             raise CaptchaException
         elif response == self.INFO_SIMULTANEITY:
             raise ConnectionException(u"同一帐号已在别处登录，请至http://bras.nju.edu.cn手动下线")
+        elif response == self.INFO_OFFLINE_SUCCESSFUL:
+            self.onlin = True
+            raise ConnectionException(u"已经处于在线状态")
         elif response == self.INFO_SESSION_ERROR:
             self.session = self.GenerateSession()
             raise ConnectionException(u"会话超时，请重试")
+        elif response == self.INFO_SERVER_ERROR:
+            raise ConnectionException(u"服务器太忙，无法响应你的请求")
         else:
             raise ConnectionException(response)
 
@@ -82,6 +91,8 @@ class ConnectionManager(object):
         elif response == self.INFO_ALREADY_OFFLINE:
             self.online = False
             raise ConnectionException(u"已经处于离线状态")
+        elif response == self.INFO_SERVER_ERROR:
+            raise ConnectionException(u"服务器太忙，无法响应你的请求")
         else:
             raise ConnectionException(response)
 
@@ -93,7 +104,7 @@ class ConnectionManager(object):
         if error in self.infoTable:
             return self.infoTable[error]
         else:
-            return u"未知错误！" + error
+            return u"未知错误：" + error
 
     def GetCaptchaImage(self):
         request = urllib2.Request(config.IMG_URL)

@@ -59,6 +59,14 @@
               </object>
             </object>
             <object class="sizeritem">
+              <object class="wxCheckBox" name="autoRetryCheckBox">
+                <label>自动解决验证码（可能导致登录过慢）</label>
+              </object>
+              <option>0</option>
+              <flag>wxALL</flag>
+              <border>5</border>
+            </object>
+            <object class="sizeritem">
               <option>0</option>
               <flag>wxALL</flag>
               <border>5</border>
