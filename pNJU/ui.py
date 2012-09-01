@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from os.path import dirname, join
+import sys
 import string
 import wx
 from wx import xrc
@@ -7,7 +8,11 @@ from userdata import Preference
 from connection import ConnectionManager, ConnectionException, CaptchaException
 
 # Resource Directory
-res_path = join(dirname(dirname(__file__)), "res")
+if getattr(sys, 'frozen', None):
+    basedir = sys._MEIPASS
+else:
+    basedir = dirname(dirname(__file__))
+res_path = join(basedir, "res")
 
 
 class MainApp(wx.App):
