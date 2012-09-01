@@ -97,11 +97,25 @@ class MainTaskBarIcon(wx.TaskBarIcon):
     def OnAbout(self, event):
         licence = """Copyright (c) 2012 Letian Zhang
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
+OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
+OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
         info = wx.AboutDialogInfo()
         info.SetName('pNJU')
@@ -179,17 +193,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         while True:
             try:
                 if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), self.GetCaptcha()):
-                    if "wxMSW" in wx.PlatformInfo:
-                        self.ShowBalloon("pNJU", u"登录成功")
+                    self.Notification("pNJU", u"登录成功")
             except CancelLoginException:
                 return
             except CaptchaException:
-                if "wxMSW" in wx.PlatformInfo:
-                    self.ShowBalloon(u"pNJU 登录失败", u"验证码错误")
+                self.Notification(u"pNJU 登录失败", u"验证码错误")
                 continue
             except ConnectionException as e:
-                if "wxMSW" in wx.PlatformInfo:
-                    self.ShowBalloon(u"pNJU 登录失败", e.message)
+                self.Notification(u"pNJU 登录失败", e.message)
                 break
             except:
                 raise
@@ -201,24 +212,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         try:
             self.connection.GetCaptchaImage()  # In order to send our session id to server
         except ConnectionException as e:
-            if "wxMSW" in wx.PlatformInfo:
-                self.ShowBalloon(u"pNJU 操作失败，请重试", e.message)
+            self.Notification(u"pNJU 操作失败，请重试", e.message)
             return
 
         retry = 10
         while retry:
             try:
                 if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), retry % 10):
-                    if "wxMSW" in wx.PlatformInfo:
-                        self.ShowBalloon("pNJU", u"登录成功")
+                    self.Notification("pNJU", u"登录成功")
                     self.UpdateIcon()
                     return
             except CaptchaException:
                 retry = retry - 1
                 continue
             except ConnectionException as e:
-                if "wxMSW" in wx.PlatformInfo:
-                    self.ShowBalloon(u"pNJU 登录失败", e.message)
+                self.Notification(u"pNJU 登录失败", e.message)
                 break
             except:
                 raise
@@ -228,11 +236,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     def DoOffline(self):
         try:
             if self.connection.DoOffline():
-                if "wxMSW" in wx.PlatformInfo:
-                    self.ShowBalloon("pNJU", u"下线成功")
+                self.Notification("pNJU", u"下线成功")
         except ConnectionException as e:
-            if "wxMSW" in wx.PlatformInfo:
-                self.ShowBalloon(u"pNJU 下线失败", e.message)
+            self.Notification(u"pNJU 下线失败", e.message)
         finally:
             self.UpdateIcon()
 
@@ -268,6 +274,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             tooltip = string.join(("pNJU", status, info), " - ")
 
         self.SetIcon(self.MakeIcon(icon), tooltip)
+
+    def Notification(self, title, content, timeout=5):
+        if "wxMSW" in wx.PlatformInfo:
+            self.ShowBalloon(title, content, timeout * 1000)
+        else:
+            wx.NotificationMessage(title, content).Show(timeout)
 
 
 class LoginValidator(wx.PyValidator):

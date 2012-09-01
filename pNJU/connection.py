@@ -122,13 +122,16 @@ class ConnectionManager(object):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(26))
 
     def UpdateStatus(self):
-        with closing(urllib2.urlopen(config.URL)) as page:
-            html = page.read().decode('utf-8')
-        if u'在线时长' in html:
-            self.online = True
-        else:
-            self.online = False
-        return self.online
+        try:
+            with closing(urllib2.urlopen(config.URL)) as page:
+                html = page.read().decode('utf-8')
+            if u'在线时长' in html:
+                self.online = True
+            else:
+                self.online = False
+            return self.online
+        except urllib2.URLError:
+            raise ConnectionException(u'获取在线信息失败')
 
 
 class ConnectionException(Exception):
