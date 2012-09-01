@@ -65,8 +65,8 @@ class ConnectionManager(object):
             raise CaptchaException
         elif response == self.INFO_SIMULTANEITY:
             raise ConnectionException(u"同一帐号已在别处登录，请至http://bras.nju.edu.cn手动下线")
-        elif response == self.INFO_OFFLINE_SUCCESSFUL:
-            self.onlin = True
+        elif response == self.INFO_ALREADY_ONLINE:
+            self.online = True
             raise ConnectionException(u"已经处于在线状态")
         elif response == self.INFO_SESSION_ERROR:
             self.session = self.GenerateSession()

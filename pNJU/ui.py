@@ -227,7 +227,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 continue
             except ConnectionException as e:
                 self.Notification(u"pNJU 登录失败", e.message)
-                break
+                self.UpdateIcon()
+                return
             except:
                 raise
         # Auto retry failed if we reach here, turn to traditional method
@@ -276,6 +277,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         self.SetIcon(self.MakeIcon(icon), tooltip)
 
     def Notification(self, title, content, timeout=5):
+        title = unicode(title)
+        content = unicode(content)
         if "wxMSW" in wx.PlatformInfo:
             self.ShowBalloon(title, content, timeout * 1000)
         else:

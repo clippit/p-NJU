@@ -51,7 +51,7 @@ class Preference(object):
         defaults = dict(
             username="",
             password="",
-            autoRetryEnabled=True,
+            autoRetryEnabled=False,
             autoConnectEnabled=False,
             statisticsEnabled=True,
         )
