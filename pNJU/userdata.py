@@ -67,6 +67,7 @@ class Preference(object):
 
 
 class Session(object):
+    """ This Class has been deprecated """
     def __init__(self):
         super(Session, self).__init__()
         self.filename = os.path.join(FindDirectory(), config.SESSION_FILENAME)

@@ -13,7 +13,7 @@ res_path = join(dirname(dirname(__file__)), "res")
 class MainApp(wx.App):
     def OnInit(self):
         xrc.XmlResource.Get().LoadFile(join(res_path, "resources.xrc"))
-        self.frame = MainFrame(None)
+        self.frame = MainFrame(None, style=wx.FRAME_NO_TASKBAR)
         return True
 
 
@@ -28,6 +28,7 @@ class MainFrame(wx.Frame):
         self.SetTaskBarIcon()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Show(False)
 
     def SetTaskBarIcon(self):
         if not wx.TaskBarIcon.IsAvailable():
@@ -66,6 +67,7 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.pref = Preference()
         self.connection = ConnectionManager()
+        self.autoRetry = True
         self.UpdateIcon(force=True)
 
     def MakeIcon(self, status="offline"):
@@ -94,12 +96,24 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         return menu
 
     def OnAbout(self, event):
+        licence = """Copyright (c) 2012 Letian Zhang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
+
         info = wx.AboutDialogInfo()
         info.SetName('pNJU')
-        info.SetVersion('0.9')
+        info.SetVersion('0.1')
         info.SetDescription(u"南京大学校园网连接助手")
+        info.SetCopyright(u'Copyright © 2012 Letian Zhang')
         info.SetWebSite('http://pnju.dayanjia.com')
+        info.SetLicence(licence)
         info.AddDeveloper('Clippit')
+        icon = wx.Image(join(res_path, "icon-online.png")).Scale(128, 128)
+        info.SetIcon(wx.IconFromBitmap(wx.BitmapFromImage(icon)))
         wx.AboutBox(info)
 
     def OnPreference(self, event):
@@ -128,7 +142,10 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
     def OnOnline(self, event):
         if not self.connection.IsOnline():  # offline
-            self.DoOnline()
+            if self.autoRetry:
+                self.DoOnlineAutoRetry()
+            else:
+                self.DoOnline()
         else:
             self.DoOffline()
 
@@ -167,6 +184,28 @@ class MainTaskBarIcon(wx.TaskBarIcon):
             else:
                 break
         self.UpdateIcon()
+
+    def DoOnlineAutoRetry(self):
+        retry = 10
+        self.connection.GetCaptchaImage()  # In order to send our session id to server
+        while retry:
+            try:
+                if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), retry % 10):
+                    if "wxMSW" in wx.PlatformInfo:
+                        self.ShowBalloon("pNJU", u"登录成功")
+                    self.UpdateIcon()
+                    return
+            except CaptchaException:
+                retry = retry - 1
+                continue
+            except ConnectionException as e:
+                if "wxMSW" in wx.PlatformInfo:
+                    self.ShowBalloon(u"pNJU 登录失败", e.message)
+                break
+            except:
+                raise
+        # Auto retry failed if we reach here, turn to traditional method
+        self.DoOnline()
 
     def DoOffline(self):
         try:

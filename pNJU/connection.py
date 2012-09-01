@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from userdata import Session
 from contextlib import closing
 from urllib import urlencode
 import urllib2
 import re
 import cStringIO
+import random
+import string
 import config
 
 
@@ -27,8 +28,8 @@ class ConnectionManager(object):
 
     def __init__(self):
         super(ConnectionManager, self).__init__()
-        #self.session = Session()
         self.online = False
+        self.session = self.GenerateSession()
 
     def IsOnline(self, force=False):
         return self.UpdateStatus() if force else self.online
@@ -44,7 +45,7 @@ class ConnectionManager(object):
         }
         request = urllib2.Request(config.URL, urlencode(postdata))
         request.add_header('User-Agent', config.USER_AGENT)
-        request.add_header('Cookie', "portalservice={0}".format(config.SESSION_ID))
+        request.add_header('Cookie', "portalservice={0}".format(self.session))
         try:
             with closing(urllib2.urlopen(request)) as page:
                 response = self.ParseResponse(page.read().decode('utf-8'))
@@ -61,6 +62,7 @@ class ConnectionManager(object):
         elif response == self.INFO_SIMULTANEITY:
             raise ConnectionException(u"同一帐号已在别处登录，请至http://bras.nju.edu.cn手动下线")
         elif response == self.INFO_SESSION_ERROR:
+            self.session = self.GenerateSession()
             raise ConnectionException(u"会话超时，请重试")
         else:
             raise ConnectionException(response)
@@ -96,7 +98,7 @@ class ConnectionManager(object):
     def GetCaptchaImage(self):
         request = urllib2.Request(config.IMG_URL)
         request.add_header('User-Agent', config.USER_AGENT)
-        request.add_header('Cookie', "portalservice={0}".format(config.SESSION_ID))
+        request.add_header('Cookie', "portalservice={0}".format(self.session))
         try:
             with closing(urllib2.urlopen(request)) as image:
                 response = image.read()
@@ -104,6 +106,9 @@ class ConnectionManager(object):
             return output
         except Exception as e:
             raise ConnectionException(e.message)
+
+    def GenerateSession(self):
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(26))
 
     def UpdateStatus(self):
         with closing(urllib2.urlopen(config.URL)) as page:
