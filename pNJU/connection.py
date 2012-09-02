@@ -16,6 +16,7 @@ class ConnectionManager(object):
     INFO_CAPTCHA_INVALID = 102
     INFO_SIMULTANEITY = 103
     INFO_ALREADY_ONLINE = 104
+    INFO_IP_NOT_ALLOWED = 105
     INFO_OFFLINE_SUCCESSFUL = 200
     INFO_ALREADY_OFFLINE = 201
     INFO_SERVER_ERROR = 301
@@ -25,6 +26,7 @@ class ConnectionManager(object):
         u'验证码错误!': INFO_CAPTCHA_INVALID,
         u'E002 您的登录数已达最大并发登录数!': INFO_SIMULTANEITY,
         u'您已登录!': INFO_ALREADY_ONLINE,
+        u'请重新获取IP地址!': INFO_IP_NOT_ALLOWED,
         u'下线成功': INFO_OFFLINE_SUCCESSFUL,
         u'您已下线!': INFO_ALREADY_OFFLINE,
         u'错误!请稍后再试!': INFO_SERVER_ERROR
@@ -68,6 +70,8 @@ class ConnectionManager(object):
         elif response == self.INFO_ALREADY_ONLINE:
             self.online = True
             raise ConnectionException(u"已经处于在线状态")
+        elif response == self.INFO_IP_NOT_ALLOWED:
+            raise ConnectionException(u"IP不在允许登录范围内")
         elif response == self.INFO_SESSION_ERROR:
             self.session = self.GenerateSession()
             raise ConnectionException(u"会话超时，请重试")
