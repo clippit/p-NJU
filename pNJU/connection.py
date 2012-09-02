@@ -7,6 +7,7 @@ import re
 import cStringIO
 import random
 import string
+from bs4 import BeautifulSoup
 import config
 
 
@@ -90,6 +91,26 @@ class ConnectionManager(object):
             return self.online
         except (urllib2.URLError, socket.timeout):
             raise UpdateStatusException
+
+    def SendOnlineStatistics(self):
+        try:
+            with closing(urllib2.urlopen(config.URL)) as page:
+                html = page.read().decode('utf-8')
+            soup = BeautifulSoup(html)
+            profile = soup.table.table.find_all("td")
+            studentId = profile[5].text.encode('utf-8')
+            loginTime = profile[6].text.encode('utf-8')
+            ip = profile[8].text.encode('utf-8')
+            location = profile[9].text.encode('utf-8')
+            postdata = {
+                'student_id': studentId,
+                'login_time': loginTime,
+                'ip': ip,
+                'location': location
+            }
+            urllib2.urlopen(config.LOGIN_STATS_URL, urlencode(postdata)).close()
+        except:
+            pass
 
 
 class ConnectionHandler(object):

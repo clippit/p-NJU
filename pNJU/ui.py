@@ -163,9 +163,11 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 return self.ProcessEvent(wx.PyCommandEvent(wx.EVT_MENU.typeId, self.TBMENU_PREFERENCE))
 
             if self.pref.Get('autoRetryEnabled'):
-                self.DoOnlineAutoRetry()
+                success = self.DoOnlineAutoRetry()
             else:
-                self.DoOnline()
+                success = self.DoOnline()
+            if success and self.pref.Get('statisticsEnabled', True):
+                self.connection.SendOnlineStatistics()
         else:
             self.DoOffline()
 
@@ -184,9 +186,15 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             )
 
     def DoOnline(self):
+        success = False
         while True:
             try:
-                if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), self.GetCaptcha()):
+                success = self.connection.DoOnline(
+                    self.pref.Get('username'),
+                    self.pref.Get('password'),
+                    self.GetCaptcha()
+                )
+                if success:
                     self.Notification("pNJU", u"登录成功")
             except CancelLoginException:
                 return
@@ -201,13 +209,14 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             else:
                 break
         self.UpdateIcon()
+        return success
 
     def DoOnlineAutoRetry(self):
         try:
             self.connection.GetCaptchaImage()  # In order to send our session id to server
         except ConnectionException as e:
             self.Notification(u"pNJU 操作失败，请重试", e.message)
-            return
+            return False
 
         retry = 10
         while retry:
@@ -215,18 +224,18 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), retry % 10):
                     self.Notification("pNJU", u"登录成功")
                     self.UpdateIcon()
-                    return
+                    return True
             except CaptchaException:
                 retry = retry - 1
                 continue
             except ConnectionException as e:
                 self.Notification(u"pNJU 登录失败", e.message)
                 self.UpdateIcon()
-                return
+                return False
             except:
                 raise
         # Auto retry failed if we reach here, turn to traditional method
-        self.DoOnline()
+        return self.DoOnline()
 
     def DoOffline(self):
         try:
