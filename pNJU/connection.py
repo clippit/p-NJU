@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-from contextlib import closing
-from urllib import urlencode
-import urllib2
+import urllib3
 import socket
 import re
 import cStringIO
@@ -30,6 +28,15 @@ class ConnectionManager(object):
 
         self.online = False
         self.session = self.GenerateSession()
+        self.portalHeaders = {
+            'User-Agent': config.USER_AGENT,
+            'Cookie': "portalservice={0}".format(self.session)
+        }
+        self.portalConnectionPool = urllib3.connectionpool.connection_from_url(
+            config.URL,
+            headers=self.portalHeaders
+        )
+        self.serviceConnectionPool = urllib3.connectionpool.connection_from_url(config.LOGIN_STATS_URL)
 
     def IsOnline(self, force=False):
         return self.UpdateStatus() if force else self.online
@@ -43,36 +50,28 @@ class ConnectionManager(object):
             'login_password': password,
             'login_code': captcha
         }
-        request = urllib2.Request(config.URL, urlencode(postdata))
-        request.add_header('User-Agent', config.USER_AGENT)
-        request.add_header('Cookie', "portalservice={0}".format(self.session))
-        with closing(urllib2.urlopen(request)) as page:
-            return self.HandleResponse(page.read().decode('utf-8'))
+        page = self.portalConnectionPool.request('POST', config.URL, postdata, headers=self.portalHeaders)
+        return self.HandleResponse(page.data.decode('utf-8'))
 
     def DoOffline(self):
-        request = urllib2.Request(config.URL, "action=disconnect")
-        request.add_header('User-Agent', config.USER_AGENT)
-        with closing(urllib2.urlopen(request)) as page:
-            return self.HandleResponse(page.read().decode('utf-8'))
+        page = self.portalConnectionPool.request('POST', config.URL, {'action': 'disconnect'})
+        return self.HandleResponse(page.data.decode('utf-8'))
 
     def HandleResponse(self, r):
         match = re.search(ur"alert\('([^']+)'\);", r)
         if match is None:
             error = 'Session Expires'
-        error = match.group(1)
+        else:
+            error = match.group(1)
         if error in self.handlerTable:
             return self.handlerTable[error]()
         else:
             raise ConnectionException(u"未知错误：" + error)
 
     def GetCaptchaImage(self):
-        request = urllib2.Request(config.IMG_URL)
-        request.add_header('User-Agent', config.USER_AGENT)
-        request.add_header('Cookie', "portalservice={0}".format(self.session))
         try:
-            with closing(urllib2.urlopen(request)) as image:
-                response = image.read()
-            output = cStringIO.StringIO(response)
+            image = self.portalConnectionPool.request('GET', config.IMG_URL)
+            output = cStringIO.StringIO(image.data)
             return output
         except Exception as e:
             raise ConnectionException(e.message)
@@ -82,21 +81,20 @@ class ConnectionManager(object):
 
     def UpdateStatus(self):
         try:
-            with closing(urllib2.urlopen(config.URL, timeout=3)) as page:
-                html = page.read().decode('utf-8')
+            page = self.portalConnectionPool.request('GET', config.URL, timeout=3)
+            html = page.data.decode('utf-8')
             if u'在线时长' in html:
                 self.online = True
             else:
                 self.online = False
             return self.online
-        except (urllib2.URLError, socket.timeout):
+        except (urllib3.exceptions.HTTPError, socket.timeout):
             raise UpdateStatusException
 
     def SendOnlineStatistics(self):
         try:
-            with closing(urllib2.urlopen(config.URL)) as page:
-                html = page.read().decode('utf-8')
-            soup = BeautifulSoup(html, "html.parser")
+            page = self.portalConnectionPool.request('GET', config.URL)
+            soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
             profile = soup.table.table.find_all("td")
             studentId = profile[5].text.encode('utf-8')
             loginTime = profile[6].text.encode('utf-8')
@@ -108,7 +106,7 @@ class ConnectionManager(object):
                 'ip': ip,
                 'location': location
             }
-            urllib2.urlopen(config.LOGIN_STATS_URL, urlencode(postdata)).close()
+            self.serviceConnectionPool.request_encode_body('POST', config.LOGIN_STATS_URL, postdata, encode_multipart=False)
         except:
             pass
 
