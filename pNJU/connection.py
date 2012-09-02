@@ -96,7 +96,7 @@ class ConnectionManager(object):
         try:
             with closing(urllib2.urlopen(config.URL)) as page:
                 html = page.read().decode('utf-8')
-            soup = BeautifulSoup(html)
+            soup = BeautifulSoup(html, "html.parser")
             profile = soup.table.table.find_all("td")
             studentId = profile[5].text.encode('utf-8')
             loginTime = profile[6].text.encode('utf-8')
