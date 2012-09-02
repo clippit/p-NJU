@@ -5,7 +5,7 @@ import string
 import wx
 from wx import xrc
 from userdata import Preference
-from connection import ConnectionManager, ConnectionException, CaptchaException
+from connection import ConnectionManager, ConnectionException, CaptchaException, UpdateStatusException
 
 # Resource Directory
 if getattr(sys, 'frozen', None):
@@ -72,19 +72,8 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.pref = Preference()
         self.connection = ConnectionManager()
+        self.SetIcon(self.MakeIcon('offline'), 'pNJU')
         self.UpdateIcon(force=True)
-
-    def MakeIcon(self, status="offline"):
-        if status not in ('online', 'offline'):
-            status = 'offline'
-
-        image = self.icons[status]
-        if "wxMSW" in wx.PlatformInfo:
-            image = image.Scale(16, 16)
-        elif "wxGTK" in wx.PlatformInfo:
-            image = image.Scale(22, 22)
-
-        return wx.IconFromBitmap(image.ConvertToBitmap())
 
     def CreatePopupMenu(self):
         menu = wx.Menu()
@@ -266,8 +255,25 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             captchaDialog.Destroy()
             raise CancelLoginException
 
+    def MakeIcon(self, status="offline"):
+        if status not in ('online', 'offline'):
+            status = 'offline'
+
+        image = self.icons[status]
+        if "wxMSW" in wx.PlatformInfo:
+            image = image.Scale(16, 16)
+        elif "wxGTK" in wx.PlatformInfo:
+            image = image.Scale(22, 22)
+
+        return wx.IconFromBitmap(image.ConvertToBitmap())
+
     def UpdateIcon(self, force=False, info=None):
-        if self.connection.IsOnline(force):
+        try:
+            isOnline = self.connection.IsOnline(force)
+        except UpdateStatusException:
+            return
+
+        if isOnline:
             status = u"在线"
             icon = 'online'
         else:
