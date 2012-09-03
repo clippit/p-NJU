@@ -57,6 +57,10 @@ class ConnectionManager(object):
         page = self.portalConnectionPool.request('POST', config.URL, {'action': 'disconnect'})
         return self.HandleResponse(page.data.decode('utf-8'))
 
+    def DoForceOffline(self, username, password):
+        print username, password
+        return True
+
     def HandleResponse(self, r):
         match = re.search(ur"alert\('([^']+)'\);", r)
         if match is None:

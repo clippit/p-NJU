@@ -53,6 +53,7 @@ class MainFrame(wx.Frame):
 class MainTaskBarIcon(wx.TaskBarIcon):
     TBMENU_ABOUT = wx.ID_ABOUT
     TBMENU_PREFERENCE = wx.ID_PREFERENCES
+    TBMENU_FORCE_OFFLINE = wx.NewId()
     TBMENU_ONLINE = wx.NewId()
     TBMENU_EXIT = wx.ID_EXIT
 
@@ -67,6 +68,7 @@ class MainTaskBarIcon(wx.TaskBarIcon):
 
         self.Bind(wx.EVT_MENU, self.OnAbout, id=self.TBMENU_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnPreference, id=self.TBMENU_PREFERENCE)
+        self.Bind(wx.EVT_MENU, self.OnForceOffline, id=self.TBMENU_FORCE_OFFLINE)
         self.Bind(wx.EVT_MENU, self.OnOnline, id=self.TBMENU_ONLINE)
         self.Bind(wx.EVT_MENU, self.OnExit, id=self.TBMENU_EXIT)
 
@@ -79,6 +81,8 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         menu = wx.Menu()
         menu.Append(self.TBMENU_ABOUT, u"关于")
         menu.Append(self.TBMENU_PREFERENCE, u"设置")
+        menu.AppendSeparator()
+        menu.Append(self.TBMENU_FORCE_OFFLINE, u"强制下线")
         menu.AppendSeparator()
         onlineItem = menu.AppendCheckItem(self.TBMENU_ONLINE, u"连接")
         menu.Append(self.TBMENU_EXIT, u"退出")
@@ -171,6 +175,15 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         else:
             self.DoOffline()
 
+    def OnForceOffline(self, event):
+        confirm = wx.MessageBox(
+            u"本操作将会强制清除你帐号的在线会话，可用于解决“在线数量限制”错误，可能会导致其他正在使用你的帐号上网的设备网络中断。确定是否继续？",
+            u"pNJU 操作确认",
+            wx.YES_NO | wx.NO_DEFAULT
+        )
+        if confirm == wx.YES:
+            self.DoForceOffline()
+
     def OnExit(self, event):
         self.RemoveIcon()
         self.frame.Close()
@@ -246,6 +259,15 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         finally:
             self.UpdateIcon()
 
+    def DoForceOffline(self):
+        try:
+            if self.connection.DoForceOffline(self.pref.Get('username'), self.pref.Get('password')):
+                self.Notification("pNJU", u"已清除其他连接会话")
+        except ConnectionException as e:
+            self.Notification(u"pNJU 强制下线失败", e.message)
+        finally:
+            self.UpdateIcon()
+
     def GetCaptcha(self):
         captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage()))
         captchaDialog = xrc.XmlResource.Get().LoadDialog(None, 'captchaDialog')
@@ -300,7 +322,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         title = unicode(title)
         content = unicode(content)
         if "wxMSW" in wx.PlatformInfo:
-            self.ShowBalloon(title, content, timeout * 1000)
+            self.ShowBalloon(title, content, timeout * 1000, wx.ICON_INFORMATION)
         else:
             wx.NotificationMessage(title, content).Show(timeout)
 
