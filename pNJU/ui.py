@@ -199,6 +199,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             )
 
     def DoOnline(self):
+        self.UpdateIcon(info=u"工作中...")
         success = False
         while True:
             try:
@@ -225,6 +226,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         return success
 
     def DoOnlineAutoRetry(self):
+        self.UpdateIcon(info=u"工作中...")
         try:
             self.connection.GetCaptchaImage()  # In order to send our session id to server
         except ConnectionException as e:
@@ -251,6 +253,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         return self.DoOnline()
 
     def DoOffline(self):
+        self.UpdateIcon(info=u"工作中...")
         try:
             if self.connection.DoOffline():
                 self.Notification("pNJU", u"下线成功")
@@ -260,6 +263,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             self.UpdateIcon()
 
     def DoForceOffline(self):
+        self.UpdateIcon(info=u"工作中...")
         try:
             if self.connection.DoForceOffline(self.pref.Get('username'), self.pref.Get('password')):
                 self.Notification("pNJU", u"已清除其他连接会话")

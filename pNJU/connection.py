@@ -32,10 +32,12 @@ class ConnectionManager(object):
             'User-Agent': config.USER_AGENT,
             'Cookie': "portalservice={0}".format(self.session)
         }
-        self.portalConnectionPool = urllib3.connectionpool.connection_from_url(
-            config.URL,
-            headers=self.portalHeaders
-        )
+        self.brasHeaders = {
+            'User-Agent': config.USER_AGENT,
+            'Cookie': "selfservice={0}".format(self.session)
+        }
+        self.portalConnectionPool = urllib3.connectionpool.connection_from_url(config.URL)
+        self.brasConnectionPool = urllib3.connectionpool.connection_from_url(config.BRAS_LOGIN_URL)
         self.serviceConnectionPool = urllib3.connectionpool.connection_from_url(config.LOGIN_STATS_URL)
 
     def IsOnline(self, force=False):
@@ -50,15 +52,61 @@ class ConnectionManager(object):
             'login_password': password,
             'login_code': captcha
         }
-        page = self.portalConnectionPool.request('POST', config.URL, postdata, headers=self.portalHeaders)
+        page = self.portalConnectionPool.request_encode_body(
+            'POST',
+            config.URL,
+            postdata,
+            headers=self.portalHeaders,
+            encode_multipart=False
+        )
         return self.HandleResponse(page.data.decode('utf-8'))
 
     def DoOffline(self):
-        page = self.portalConnectionPool.request('POST', config.URL, {'action': 'disconnect'})
+        page = self.portalConnectionPool.request_encode_body(
+            'POST',
+            config.URL,
+            {'action': 'disconnect'},
+            headers=self.portalHeaders,
+            encode_multipart=False
+        )
         return self.HandleResponse(page.data.decode('utf-8'))
 
     def DoForceOffline(self, username, password):
-        print username, password
+        loginPage = self.brasConnectionPool.request_encode_body(
+            'POST',
+            config.BRAS_LOGIN_URL,
+            {
+                'login_username': username,
+                'login_password': password,
+                'action': 'login'
+            },
+            headers=self.brasHeaders,
+            encode_multipart=False
+        )
+        if len(loginPage.data) > 100:
+            raise ConnectionException(u"自助服务系统登录失败，用户名密码不正确？")
+
+        onlineListPage = self.brasConnectionPool.request(
+            'GET',
+            config.BRAS_URL,
+            {'action': 'online'},
+            headers=self.brasHeaders
+        )
+        soup = BeautifulSoup(onlineListPage.data.decode('utf-8'), "html.parser")
+        onlineInfo = soup.find_all(id=re.compile('^line(\d+)$'))
+        for info in onlineInfo:
+            sid = info['id'][4:]
+            response = self.brasConnectionPool.request(
+                'GET',
+                config.BRAS_URL,
+                {
+                    'action': 'disconnect',
+                    'id': sid
+                },
+                headers=self.brasHeaders
+            )
+            if u'下线成功' not in response.data.decode('utf-8'):
+                raise ConnectionException("操作未成功，请至 http://bras.nju.edu.cn 手动尝试")
         return True
 
     def HandleResponse(self, r):
@@ -74,7 +122,7 @@ class ConnectionManager(object):
 
     def GetCaptchaImage(self):
         try:
-            image = self.portalConnectionPool.request('GET', config.IMG_URL)
+            image = self.portalConnectionPool.request('GET', config.IMG_URL, headers=self.portalHeaders)
             output = cStringIO.StringIO(image.data)
             return output
         except Exception as e:
@@ -85,7 +133,7 @@ class ConnectionManager(object):
 
     def UpdateStatus(self):
         try:
-            page = self.portalConnectionPool.request('GET', config.URL, timeout=3)
+            page = self.portalConnectionPool.request('GET', config.URL, timeout=3, headers=self.portalHeaders)
             html = page.data.decode('utf-8')
             if u'在线时长' in html:
                 self.online = True
@@ -97,7 +145,7 @@ class ConnectionManager(object):
 
     def SendOnlineStatistics(self):
         try:
-            page = self.portalConnectionPool.request('GET', config.URL)
+            page = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders)
             soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
             profile = soup.table.table.find_all("td")
             studentId = profile[5].text.encode('utf-8')
@@ -110,7 +158,12 @@ class ConnectionManager(object):
                 'ip': ip,
                 'location': location
             }
-            self.serviceConnectionPool.request_encode_body('POST', config.LOGIN_STATS_URL, postdata, encode_multipart=False)
+            self.serviceConnectionPool.request_encode_body(
+                'POST',
+                config.LOGIN_STATS_URL,
+                postdata,
+                encode_multipart=False
+            )
         except:
             pass
 
@@ -131,7 +184,7 @@ class ConnectionHandler(object):
         raise CaptchaException
 
     def InfoSimultaneity(self):
-        raise ConnectionException(u"同一帐号已在别处登录，请至http://bras.nju.edu.cn手动下线")
+        raise ConnectionException(u"同一帐号已在别处登录，请使用强制下线功能")
 
     def AlreadyOnline(self):
         self.manager.online = True
