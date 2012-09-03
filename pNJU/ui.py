@@ -291,11 +291,11 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             status = 'offline'
 
         image = self.icons[status]
-        if "wxMSW" in wx.PlatformInfo:
-            image = image.Scale(16, 16)
+        if "wxMac" in wx.PlatformInfo:
+            image = image.Scale(32, 32)
         elif "wxGTK" in wx.PlatformInfo:
             image = image.Scale(22, 22)
-
+        image = image.Scale(16, 16)  # Windows and others
         return wx.IconFromBitmap(image.ConvertToBitmap())
 
     def UpdateIcon(self, force=False, info=None):
