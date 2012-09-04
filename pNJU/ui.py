@@ -77,6 +77,10 @@ class MainTaskBarIcon(wx.TaskBarIcon):
         self.SetIcon(self.MakeIcon('offline'), 'pNJU')
         self.UpdateIcon(force=True)
 
+        self.checkStatusTimer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnCheckStatus, self.checkStatusTimer)
+        self.checkStatusTimer.Start(10000)
+
     def CreatePopupMenu(self):
         menu = wx.Menu()
         menu.Append(self.TBMENU_ABOUT, u"关于")
@@ -185,8 +189,9 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             self.DoForceOffline()
 
     def OnExit(self, event):
+        self.checkStatusTimer.Stop()
         self.RemoveIcon()
-        self.frame.Close()
+        wx.CallAfter(self.frame.Close)
 
     def SavePreference(self, *args, **kwargs):
         try:
@@ -290,17 +295,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             captchaDialog.Destroy()
             raise CancelLoginException
 
-    def MakeIcon(self, status="offline"):
-        if status not in ('online', 'offline'):
-            status = 'offline'
-
-        image = self.icons[status]
-        if "wxMac" in wx.PlatformInfo:
-            image = image.Scale(32, 32)
-        elif "wxGTK" in wx.PlatformInfo:
-            image = image.Scale(22, 22)
-        image = image.Scale(16, 16)  # Windows and others
-        return wx.IconFromBitmap(image.ConvertToBitmap())
+    def OnCheckStatus(self, event):
+        wx.CallAfter(self.UpdateIcon, force=True)
 
     def UpdateIcon(self, force=False, info=None):
         try:
@@ -321,6 +317,18 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             tooltip = string.join(("pNJU", status, info), " - ")
 
         self.SetIcon(self.MakeIcon(icon), tooltip)
+
+    def MakeIcon(self, status="offline"):
+        if status not in ('online', 'offline'):
+            status = 'offline'
+
+        image = self.icons[status]
+        if "wxMac" in wx.PlatformInfo:
+            image = image.Scale(32, 32)
+        elif "wxGTK" in wx.PlatformInfo:
+            image = image.Scale(22, 22)
+        image = image.Scale(16, 16)  # Windows and others
+        return wx.IconFromBitmap(image.ConvertToBitmap())
 
     def Notification(self, title, content, timeout=5):
         title = unicode(title)

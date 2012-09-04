@@ -135,7 +135,7 @@ class ConnectionManager(object):
         try:
             page = self.portalConnectionPool.request('GET', config.URL, timeout=3, headers=self.portalHeaders)
             html = page.data.decode('utf-8')
-            if u'在线时长' in html:
+            if u'注销' in html:
                 self.online = True
             else:
                 self.online = False
@@ -144,28 +144,29 @@ class ConnectionManager(object):
             raise UpdateStatusException
 
     def SendOnlineStatistics(self):
-        try:
-            page = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders)
-            soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
-            profile = soup.table.table.find_all("td")
-            studentId = profile[5].text.encode('utf-8')
-            loginTime = profile[6].text.encode('utf-8')
-            ip = profile[8].text.encode('utf-8')
-            location = profile[9].text.encode('utf-8')
-            postdata = {
-                'student_id': studentId,
-                'login_time': loginTime,
-                'ip': ip,
-                'location': location
-            }
-            self.serviceConnectionPool.request_encode_body(
-                'POST',
-                config.LOGIN_STATS_URL,
-                postdata,
-                encode_multipart=False
-            )
-        except:
-            pass
+        pass
+        # try:
+        #     page = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders)
+        #     soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
+        #     profile = soup.table.table.find_all("td")
+        #     studentId = profile[5].text.encode('utf-8')
+        #     loginTime = profile[6].text.encode('utf-8')
+        #     ip = profile[8].text.encode('utf-8')
+        #     location = profile[9].text.encode('utf-8')
+        #     postdata = {
+        #         'student_id': studentId,
+        #         'login_time': loginTime,
+        #         'ip': ip,
+        #         'location': location
+        #     }
+        #     self.serviceConnectionPool.request_encode_body(
+        #         'POST',
+        #         config.LOGIN_STATS_URL,
+        #         postdata,
+        #         encode_multipart=False
+        #     )
+        # except:
+        #     pass
 
 
 class ConnectionHandler(object):
