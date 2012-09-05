@@ -4,8 +4,10 @@ import sys
 import string
 import wx
 from wx import xrc
+from . import __version__
 from userdata import Preference
 from connection import ConnectionManager, ConnectionException, CaptchaException, UpdateStatusException
+import config
 
 # Resource Directory
 if getattr(sys, 'frozen', None):
@@ -121,12 +123,12 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
         info = wx.AboutDialogInfo()
         info.SetName('pNJU')
-        info.SetVersion('0.1')
+        info.SetVersion(__version__)
         info.SetDescription(u"南京大学校园网连接助手")
         info.SetCopyright(u'Copyright © 2012 Letian Zhang')
-        info.SetWebSite('http://pnju.dayanjia.com')
+        info.SetWebSite(config.WEBSITE)
         info.SetLicence(licence)
-        info.AddDeveloper('Clippit')
+        info.AddDeveloper(u'Clippit (A.K.A. 大眼夹)')
         icon = wx.Image(join(res_path, "icon-online.png")).Scale(128, 128)
         info.SetIcon(wx.IconFromBitmap(wx.BitmapFromImage(icon)))
         wx.AboutBox(info)
@@ -317,6 +319,18 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             tooltip = string.join(("pNJU", status, info), " - ")
 
         self.SetIcon(self.MakeIcon(icon), tooltip)
+
+        if force and isOnline:
+            newVersion = self.connection.CheckNewVersion()
+            if newVersion is not None:
+                confirm = wx.MessageBox(
+                    u"发现新版本：{0}。是否立即查看更新信息？".format(newVersion),
+                    u"pNJU 发现新版本",
+                    wx.YES_NO | wx.YES_DEFAULT
+                )
+                if confirm == wx.YES:
+                    import webbrowser
+                    webbrowser.open(config.WEBSITE)
 
     def MakeIcon(self, status="offline"):
         if status not in ('online', 'offline'):

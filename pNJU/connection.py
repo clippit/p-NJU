@@ -6,6 +6,7 @@ import cStringIO
 import random
 import string
 from bs4 import BeautifulSoup
+from . import __version__
 import config
 
 
@@ -26,6 +27,7 @@ class ConnectionManager(object):
             'Session Expires': self.handler.SessionExpire
         }
 
+        self.hasCheckedNewVersion = False
         self.online = False
         self.session = self.GenerateSession()
         self.portalHeaders = {
@@ -167,6 +169,22 @@ class ConnectionManager(object):
         #     )
         # except:
         #     pass
+
+    def CheckNewVersion(self):
+        if self.hasCheckedNewVersion:
+            return None
+        new = None
+        try:
+            remote = self.serviceConnectionPool.request('GET', config.CHECK_VERSION_URL)
+            if remote.status != 200:
+                raise
+            remoteVersion = remote.data.strip()
+            if cmp(remoteVersion.split('.'), __version__.split('.')):
+                new = remoteVersion
+            self.hasCheckedNewVersion = True
+        except:
+            pass
+        return new
 
 
 class ConnectionHandler(object):
