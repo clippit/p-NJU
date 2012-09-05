@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>p-NJU by clippit</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>p-NJU</h1>
+        <p>南京大学校园网连接助手</p>
+
+        <p class="view"><a href="https://github.com/clippit/p-NJU">View the Project on GitHub <small>clippit/p-NJU</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/clippit/p-NJU/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/clippit/p-NJU/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/clippit/p-NJU">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>Release Your Power of <em>p.nju.edu.cn</em>!</h1>
+
+<h2>How to build your own version</h2>
+
+<p>p-NJU is built on <a href="http://wxpython.org/">wxPython</a>, a cross-platform GUI library with the <a href="http://www.python.org/">Python</a> programming language.</p>
+
+<p>My development environment is Python 2.7.3 + wxPython 2.9.4. To install the wxPython 2.9 version which is in the unstable channel:</p>
+
+<ul>
+<li>If you are in <strong>Windows</strong>, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, download and install it.</li>
+<li>If you are in <strong>Linux</strong> and there is no such version in your software repository, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, get the source code, apply the 2.9.4.1 patch <a href="http://sourceforge.net/projects/wxpython/files/wxPython/2.9.4.0/wxPython-src-2.9.4.1.patch/download">here</a>, then build wxWidgets and wxPython from scratch. There is a <a href="http://wxpython.org/builddoc.php">build doc</a> FYI.</li>
+<li>If you are in <strong>Mac OSX</strong>, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, download and install it. Specifically for Mountain Lion, please refer <a href="http://trac.wxwidgets.org/ticket/14523#comment:4">this thread</a> for help.</li>
+</ul><p>After that, you have to install additional Python packages that p-NJU uses. It's pretty easy to do it with <a href="http://www.pip-installer.org/">pip</a>:</p>
+
+<pre><code>pip install urllib3
+pip install beautifulsoup4
+</code></pre>
+
+<p>OK, now you can run it by <code>python main.py</code> in console window. To build executable file, you need to use <a href="http://www.pyinstaller.org/">PyInstaller</a>.</p>
+
+<h2>How to contribute</h2>
+
+<p>Please fork this repository and send me pull request. Definitely you have learned how to use <code>git</code>:)</p>
+
+<h2>License</h2>
+
+<p>This software is distributed under MIT Licence.</p>
+
+<blockquote>
+<p>Copyright (C) 2012 Letian Zhang(<a href="https://github.com/clippit" class="user-mention">@clippit</a>)</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+</blockquote>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/clippit">clippit</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
