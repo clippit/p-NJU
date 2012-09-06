@@ -223,7 +223,7 @@ header {
 }
 
 p.header {
-	font-size: 16px;
+	font-size: 14px;
 }
 
 h1.header {
@@ -323,6 +323,7 @@ footer {
   position:fixed;
   bottom:10px;
 	padding-left: 50px;
+  font-size: 12px;
 }
 
 @media print, screen and (max-width: 960px) {
