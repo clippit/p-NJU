@@ -30,41 +30,49 @@
       <section>
         <h1>Release Your Power of <em>p.nju.edu.cn</em>!</h1>
 
-<h2>How to build your own version</h2>
+<h2>它是干什么用的？</h2>
 
-<p>p-NJU is built on <a href="http://wxpython.org/">wxPython</a>, a cross-platform GUI library with the <a href="http://www.python.org/">Python</a> programming language.</p>
+<p>亲们有没有觉得每次想上网的时候都要打开浏览器，进入<code>http://p.nju.edu.cn</code>，然后输入用户名、密码、验证码，再点“登录”的过程十分繁琐吗？于是这个小程序就应运而生了！它会安静地躺在你的任务栏通知区域里，帮你完成上网和下线的操作。</p>
 
-<p>My development environment is Python 2.7.3 + wxPython 2.9.4. To install the wxPython 2.9 version which is in the unstable channel:</p>
+<p><img src="http://clippit.github.com/p-NJU/images/screenshot1.png" alt="主界面"></p>
 
-<ul>
-<li>If you are in <strong>Windows</strong>, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, download and install it.</li>
-<li>If you are in <strong>Linux</strong> and there is no such version in your software repository, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, get the source code, apply the 2.9.4.1 patch <a href="http://sourceforge.net/projects/wxpython/files/wxPython/2.9.4.0/wxPython-src-2.9.4.1.patch/download">here</a>, then build wxWidgets and wxPython from scratch. There is a <a href="http://wxpython.org/builddoc.php">build doc</a> FYI.</li>
-<li>If you are in <strong>Mac OSX</strong>, go to <a href="http://wxpython.org/download.php#unstable">download page</a>, download and install it. Specifically for Mountain Lion, please refer <a href="http://trac.wxwidgets.org/ticket/14523#comment:4">this thread</a> for help.</li>
-</ul><p>After that, you have to install additional Python packages that p-NJU uses. It's pretty easy to do it with <a href="http://www.pip-installer.org/">pip</a>:</p>
+<h2>如何使用？</h2>
 
-<pre><code>pip install urllib3
-pip install beautifulsoup4
-</code></pre>
+<p>很简单哦，先进入设置，填好用户名和密码，再点连接就行了。当然，至于验证码嘛……</p>
 
-<p>OK, now you can run it by <code>python main.py</code> in console window. To build executable file, you need to use <a href="http://www.pyinstaller.org/">PyInstaller</a>.</p>
+<p><img src="http://clippit.github.com/p-NJU/images/screenshot2.png" alt="验证码"></p>
 
-<h2>How to contribute</h2>
+<h2>每次输入验证码太麻烦了，可以跳过吗？</h2>
 
-<p>Please fork this repository and send me pull request. Definitely you have learned how to use <code>git</code>:)</p>
+<p>当然可以！不过由于此功能还在试验中，所以可能导致登录过程缓慢。想要开启，请在设置页面中勾选“自动解决验证码”的选项。</p>
 
-<h2>License</h2>
+<p><img src="http://clippit.github.com/p-NJU/images/screenshot3.png" alt="偏好设置"></p>
 
-<p>This software is distributed under MIT Licence.</p>
+<p>如果看到这个信息，就代表成功了！</p>
 
-<blockquote>
-<p>Copyright (C) 2012 Letian Zhang(<a href="https://github.com/clippit" class="user-mention">@clippit</a>)</p>
+<p><img src="http://clippit.github.com/p-NJU/images/screenshot4.png" alt="登录成功"></p>
 
-<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+<h2>“强制下线”功能是干什么用的？</h2>
 
-<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+<p>有时我们登录会发生“您的登录数已达最大并发登录数”的错误，这是因为普通帐号最多只能在一台设备中登录。此时需要到<a href="http://bras.nju.edu.cn%E5%AF%B9%E5%85%B6%E4%BB%96%E7%99%BB%E5%BD%95%E8%AE%BE%E5%A4%87%E8%BF%9B%E8%A1%8C%E5%BC%BA%E5%88%B6%E4%B8%8B%E7%BA%BF%E6%93%8D%E4%BD%9C%EF%BC%8C%E6%89%8D%E8%83%BD%E6%AD%A3%E5%B8%B8%E8%BF%9E%E6%8E%A5%E3%80%82%E8%BF%99%E4%B8%AA%E5%8A%9F%E8%83%BD%E4%BE%BF%E6%98%AF%E7%AE%80%E5%8C%96%E4%BA%86%E8%AF%A5%E6%93%8D%E4%BD%9C%EF%BC%8C%E5%AE%9E%E7%8E%B0%E4%BA%86%E4%B8%80%E9%94%AE%E5%BC%BA%E5%88%B6%E4%B8%8B%E7%BA%BF%E7%9A%84%E5%8A%9F%E8%83%BD%E3%80%82">http://bras.nju.edu.cn对其他登录设备进行强制下线操作，才能正常连接。这个功能便是简化了该操作，实现了一键强制下线的功能。</a></p>
 
-<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
-</blockquote>
+<h2>“帮助改进该程序”是干什么的？难道会收集我的密码？</h2>
+
+<p>p-NJU承诺保障用户的帐号安全，绝不会偷偷收集用户的密码，即便在保存用户密码的配置文件中也避免了明文储存密码。就目前来说，这个选项并没有什么实际作用，在将来的更新中可能会用于改善程序逻辑和检测校园网的功能。</p>
+
+<h2>我不使用Windows，就不能使用它了吗？</h2>
+
+<p>就当前版本来说，是的:( 不过事实上Linux和Mac OS X的版本已经可以使用，不过需要进一步测试，并完善打包部署的工作。如果你希望帮助实现它们，请不要犹豫联系我们。附上Ubuntu下的本程序谍照：</p>
+
+<p><img src="http://clippit.github.com/p-NJU/images/screenshot3.png" alt="p-NJU for Ubuntu"></p>
+
+<h2>程序出现问题了，该找谁？</h2>
+
+<p>如果发生问题，可能有两种原因：<code>p.nju.edu.cn</code>系统的问题或者是本程序的问题。如果你不确定问题所在，可以先向本项目报告。你可以在小百合BBS的Network版或Software发帖求助，或者联系项目维护者@clippit。</p>
+
+<h2>我可以协助改进这个工具吗？</h2>
+
+<p>强烈欢迎！你可以在本页上找到<a href="https://github.com/clippit/p-NJU">项目主页</a>，那里有进一步说明。</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/clippit">clippit</a></p>
