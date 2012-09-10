@@ -21,7 +21,7 @@ class ConnectionManager(object):
             u'E002 您的登录数已达最大并发登录数!': self.handler.InfoSimultaneity,
             u'您已登录!': self.handler.AlreadyOnline,
             u'请重新获取IP地址!': self.handler.IpNotAllowed,
-            u'下线成功': self.handler.OfflineSuccessful,
+            u'下线成功!': self.handler.OfflineSuccessful,
             u'您已下线!': self.handler.AlreadyOffline,
             u'错误!请稍后再试!': self.handler.ServerError,
             'Session Expires': self.handler.SessionExpire
@@ -70,11 +70,15 @@ class ConnectionManager(object):
         return self.HandleResponse(html)  # Other situations
 
     def DoOffline(self):
+        postdata = {
+            'action': 'disconnect',
+            'p_logout': 'p_logout'
+        }
         try:
             page = self.portalConnectionPool.request_encode_body(
                 'POST',
                 config.URL,
-                {'action': 'disconnect'},
+                postdata,
                 headers=self.portalHeaders,
                 encode_multipart=False
             )
