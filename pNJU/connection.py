@@ -15,7 +15,7 @@ class ConnectionManager(object):
         super(ConnectionManager, self).__init__()
         self.handler = ConnectionHandler(self)
         self.handlerTable = {
-            u'登录成功!': self.handler.OnlineSuccessful,
+            #u'登录成功!': self.handler.OnlineSuccessful,
             u'E010 您输入的密码无效!': self.handler.PasswordInvalid,
             u'验证码错误!': self.handler.CaptchaInvalid,
             u'E002 您的登录数已达最大并发登录数!': self.handler.InfoSimultaneity,
@@ -38,9 +38,9 @@ class ConnectionManager(object):
             'User-Agent': config.USER_AGENT,
             'Cookie': "selfservice={0}".format(self.session)
         }
-        self.portalConnectionPool = urllib3.connectionpool.connection_from_url(config.URL)
-        self.brasConnectionPool = urllib3.connectionpool.connection_from_url(config.BRAS_LOGIN_URL)
-        self.serviceConnectionPool = urllib3.connectionpool.connection_from_url(config.LOGIN_STATS_URL)
+        self.portalConnectionPool = urllib3.connectionpool.connection_from_url(config.URL, timeout=config.CONNECTION_TIMEOUT)
+        self.brasConnectionPool = urllib3.connectionpool.connection_from_url(config.BRAS_LOGIN_URL, timeout=config.CONNECTION_TIMEOUT)
+        self.serviceConnectionPool = urllib3.connectionpool.connection_from_url(config.LOGIN_STATS_URL, timeout=config.CONNECTION_TIMEOUT)
 
     def IsOnline(self, force=False):
         return self.UpdateStatus() if force else self.online
@@ -50,27 +50,36 @@ class ConnectionManager(object):
             'action': 'login',
             'url': 'http://p.nju.edu.cn',
             'p_login': 'p_login',
-            'login_username': username,
-            'login_password': password,
-            'login_code': captcha
+            'username': username,
+            'password': password,
+            'code': captcha
         }
-        page = self.portalConnectionPool.request_encode_body(
-            'POST',
-            config.URL,
-            postdata,
-            headers=self.portalHeaders,
-            encode_multipart=False
-        )
-        return self.HandleResponse(page.data.decode('utf-8'))
+        try:
+            self.portalConnectionPool.request_encode_body(
+                'POST',
+                config.URL,
+                postdata,
+                headers=self.portalHeaders,
+                encode_multipart=False
+            )
+            html = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders).data.decode('utf-8')
+        except Exception as e:
+            raise ConnectionException(e.message)
+        if u'注销' in html:  # Login Successfully
+            return self.handler.OnlineSuccessful()
+        return self.HandleResponse(html)  # Other situations
 
     def DoOffline(self):
-        page = self.portalConnectionPool.request_encode_body(
-            'POST',
-            config.URL,
-            {'action': 'disconnect'},
-            headers=self.portalHeaders,
-            encode_multipart=False
-        )
+        try:
+            page = self.portalConnectionPool.request_encode_body(
+                'POST',
+                config.URL,
+                {'action': 'disconnect'},
+                headers=self.portalHeaders,
+                encode_multipart=False
+            )
+        except Exception as e:
+            raise ConnectionException(e.message)
         return self.HandleResponse(page.data.decode('utf-8'))
 
     def DoForceOffline(self, username, password):
@@ -112,6 +121,7 @@ class ConnectionManager(object):
         return True
 
     def HandleResponse(self, r):
+        print r  # For debug purpose
         match = re.search(ur"alert\('([^']+)'\);", r)
         if match is None:
             error = 'Session Expires'
