@@ -163,14 +163,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
     def OnOnline(self, event):
         if not self.connection.IsOnline():
-            # Check if username and password are set
-            if not all((self.pref.Get('username'), self.pref.Get('password'))):
-                wx.MessageBox(
-                    u'用户名密码尚未设置。',
-                    u"pNJU 错误",
-                    wx.OK | wx.ICON_EXCLAMATION
-                )
-                return self.ProcessEvent(wx.PyCommandEvent(wx.EVT_MENU.typeId, self.TBMENU_PREFERENCE))
+            if not self.IsLoginInfoSet():
+                return
 
             if self.pref.Get('autoRetryEnabled'):
                 success = self.DoOnlineAutoRetry()
@@ -182,6 +176,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             self.DoOffline()
 
     def OnForceOffline(self, event):
+        if not self.IsLoginInfoSet():
+            return
         confirm = wx.MessageBox(
             u"本操作将会强制清除你帐号的在线会话，可用于解决“在线数量限制”错误，可能会导致其他正在使用你的帐号上网的设备网络中断。确定是否继续？",
             u"pNJU 操作确认",
@@ -278,6 +274,19 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             self.Notification(u"pNJU 强制下线失败", e.message)
         finally:
             self.UpdateIcon()
+
+    def IsLoginInfoSet(self):
+        "Check if username and password are set"
+        if not all((self.pref.Get('username'), self.pref.Get('password'))):
+            wx.MessageBox(
+                u'用户名密码尚未设置。',
+                u"pNJU 错误",
+                wx.OK | wx.ICON_EXCLAMATION
+            )
+            self.ProcessEvent(wx.PyCommandEvent(wx.EVT_MENU.typeId, self.TBMENU_PREFERENCE))
+            return False
+        else:
+            return True
 
     def GetCaptcha(self):
         captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage()))

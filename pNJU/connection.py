@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import urllib3
-import socket
 import re
 import cStringIO
 import random
 import string
+from datetime import date
 from bs4 import BeautifulSoup
 from . import __version__
 import config
@@ -16,6 +16,7 @@ class ConnectionManager(object):
         self.handler = ConnectionHandler(self)
         self.handlerTable = {
             #u'登录成功!': self.handler.OnlineSuccessful,
+            u'E012 未发现此用户!': self.handler.PasswordInvalid,
             u'E010 您输入的密码无效!': self.handler.PasswordInvalid,
             u'验证码错误!': self.handler.CaptchaInvalid,
             u'E002 您的登录数已达最大并发登录数!': self.handler.InfoSimultaneity,
@@ -24,7 +25,7 @@ class ConnectionManager(object):
             u'下线成功!': self.handler.OfflineSuccessful,
             u'您已下线!': self.handler.AlreadyOffline,
             u'错误!请稍后再试!': self.handler.ServerError,
-            'Session Expires': self.handler.SessionExpire
+            #'Session Expires': self.handler.SessionExpire
         }
 
         self.hasCheckedNewVersion = False
@@ -32,11 +33,7 @@ class ConnectionManager(object):
         self.session = self.GenerateSession()
         self.portalHeaders = {
             'User-Agent': config.USER_AGENT,
-            'Cookie': "portalservice={0}".format(self.session)
-        }
-        self.brasHeaders = {
-            'User-Agent': config.USER_AGENT,
-            'Cookie': "selfservice={0}".format(self.session)
+            'Referer': config.URL
         }
         self.portalConnectionPool = urllib3.connectionpool.connection_from_url(config.URL, timeout=config.CONNECTION_TIMEOUT)
         self.brasConnectionPool = urllib3.connectionpool.connection_from_url(config.BRAS_LOGIN_URL, timeout=config.CONNECTION_TIMEOUT)
@@ -55,23 +52,31 @@ class ConnectionManager(object):
             'code': captcha
         }
         try:
-            self.portalConnectionPool.request_encode_body(
+            login_page = self.portalConnectionPool.request_encode_body(
                 'POST',
                 config.URL,
                 postdata,
                 headers=self.portalHeaders,
                 encode_multipart=False
             )
-            html = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders).data.decode('utf-8')
         except Exception as e:
-            raise ConnectionException(e.message)
-        if u'注销' in html:  # Login Successfully
-            return self.handler.OnlineSuccessful()
-        return self.HandleResponse(html)  # Other situations
+            self.handler.ConnectionError(e)
+
+        if self.HandleResponse(login_page.data.decode('utf-8')) is None:
+            try:
+                html = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders).data.decode('utf-8')
+            except Exception as e:
+                self.handler.ConnectionError(e)
+            if u'注销' in html:  # Login Successfully
+                return self.handler.OnlineSuccessful()
+            else:
+                return self.HandleResponse(html)  # Other situations
+        else:
+            raise ConnectionException(u'未知错误')  # Should not be here
 
     def DoOffline(self):
         postdata = {
-            'action': 'disconnect',
+            'action': 'logout',
             'p_logout': 'p_logout'
         }
         try:
@@ -83,52 +88,64 @@ class ConnectionManager(object):
                 encode_multipart=False
             )
         except Exception as e:
-            raise ConnectionException(e.message)
+            self.handler.ConnectionError(e)
         return self.HandleResponse(page.data.decode('utf-8'))
 
     def DoForceOffline(self, username, password):
-        loginPage = self.brasConnectionPool.request_encode_body(
-            'POST',
-            config.BRAS_LOGIN_URL,
-            {
-                'login_username': username,
-                'login_password': password,
-                'action': 'login'
-            },
-            headers=self.brasHeaders,
-            encode_multipart=False
-        )
+        headers = {
+            'User-Agent': config.USER_AGENT,
+            'Cookie': "selfservice={0}".format(self.session)
+        }
+        try:
+            loginPage = self.brasConnectionPool.request_encode_body(
+                'POST',
+                config.BRAS_LOGIN_URL,
+                {
+                    'login_username': username,
+                    'login_password': password,
+                    'action': 'login'
+                },
+                headers=headers,
+                encode_multipart=False
+            )
+        except Exception as e:
+            self.handler.ConnectionError(e)
         if len(loginPage.data) > 100:
             raise ConnectionException(u"自助服务系统登录失败，用户名密码不正确？")
 
-        onlineListPage = self.brasConnectionPool.request(
-            'GET',
-            config.BRAS_URL,
-            {'action': 'online'},
-            headers=self.brasHeaders
-        )
+        try:
+            onlineListPage = self.brasConnectionPool.request(
+                'GET',
+                config.BRAS_URL,
+                {'action': 'online'},
+                headers=headers
+            )
+        except Exception as e:
+            self.handler.ConnectionError(e)
         soup = BeautifulSoup(onlineListPage.data.decode('utf-8'), "html.parser")
         onlineInfo = soup.find_all(id=re.compile('^line(\d+)$'))
         for info in onlineInfo:
             sid = info['id'][4:]
-            response = self.brasConnectionPool.request(
-                'GET',
-                config.BRAS_URL,
-                {
-                    'action': 'disconnect',
-                    'id': sid
-                },
-                headers=self.brasHeaders
-            )
+            try:
+                response = self.brasConnectionPool.request(
+                    'GET',
+                    config.BRAS_URL,
+                    {
+                        'action': 'disconnect',
+                        'id': sid
+                    },
+                    headers=headers
+                )
+            except Exception as e:
+                self.handler.ConnectionError(e)
             if u'下线成功' not in response.data.decode('utf-8'):
                 raise ConnectionException("操作未成功，请至 http://bras.nju.edu.cn 手动尝试")
         return True
 
     def HandleResponse(self, r):
-        print r  # For debug purpose
         match = re.search(ur"alert\('([^']+)'\);", r)
         if match is None:
-            error = 'Session Expires'
+            return None
         else:
             error = match.group(1)
         if error in self.handlerTable:
@@ -137,12 +154,13 @@ class ConnectionManager(object):
             raise ConnectionException(u"未知错误：" + error)
 
     def GetCaptchaImage(self):
+        headers = dict(self.portalHeaders, Cookie="portalservice={0}".format(self.session))
         try:
-            image = self.portalConnectionPool.request('GET', config.IMG_URL, headers=self.portalHeaders)
+            image = self.portalConnectionPool.request('GET', config.IMG_URL, headers=headers)
             output = cStringIO.StringIO(image.data)
             return output
         except Exception as e:
-            raise ConnectionException(e.message)
+            self.handler.ConnectionError(e)
 
     def GenerateSession(self):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(26))
@@ -156,33 +174,34 @@ class ConnectionManager(object):
             else:
                 self.online = False
             return self.online
-        except (urllib3.exceptions.HTTPError, socket.timeout):
+        except Exception:
             raise UpdateStatusException
 
     def SendOnlineStatistics(self):
-        pass
-        # try:
-        #     page = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders)
-        #     soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
-        #     profile = soup.table.table.find_all("td")
-        #     studentId = profile[5].text.encode('utf-8')
-        #     loginTime = profile[6].text.encode('utf-8')
-        #     ip = profile[8].text.encode('utf-8')
-        #     location = profile[9].text.encode('utf-8')
-        #     postdata = {
-        #         'student_id': studentId,
-        #         'login_time': loginTime,
-        #         'ip': ip,
-        #         'location': location
-        #     }
-        #     self.serviceConnectionPool.request_encode_body(
-        #         'POST',
-        #         config.LOGIN_STATS_URL,
-        #         postdata,
-        #         encode_multipart=False
-        #     )
-        # except:
-        #     pass
+        try:
+            page = self.portalConnectionPool.request('GET', config.URL, headers=self.portalHeaders)
+            soup = BeautifulSoup(page.data.decode('utf-8'), "html.parser")
+            profile = soup.table.find_all("td")
+            studentId = profile[5].text.encode('utf-8')
+            loginTime = '%s-%s' % (date.today().year, profile[6].text.encode('utf-8'), )
+            ip = profile[7].text.encode('utf-8')
+            mac = profile[8].text.encode('utf-8')
+            location = profile[9].text.encode('utf-8')
+            postdata = {
+                'student_id': studentId,
+                'login_time': loginTime,
+                'ip': ip,
+                'mac': mac,
+                'location': location
+            }
+            self.serviceConnectionPool.request_encode_body(
+                'POST',
+                config.LOGIN_STATS_URL,
+                postdata,
+                encode_multipart=False
+            )
+        except:
+            pass
 
     def CheckNewVersion(self):
         if self.hasCheckedNewVersion:
@@ -205,6 +224,9 @@ class ConnectionHandler(object):
     def __init__(self, manager):
         super(ConnectionHandler, self).__init__()
         self.manager = manager
+        self.connectionErrorMessage = {
+            urllib3.exceptions.TimeoutError: u"超时，请检查网络"
+        }
 
     def OnlineSuccessful(self):
         self.manager.online = True
@@ -237,9 +259,15 @@ class ConnectionHandler(object):
     def ServerError(self):
         raise ConnectionException(u"服务器太忙，无法响应你的请求")
 
-    def SessionExpire(self):
-        self.manager.session = self.manager.GenerateSession()
-        raise ConnectionException(u"会话超时，请重试")
+    def ConnectionError(self, e):
+        if type(e) in self.connectionErrorMessage:
+            raise ConnectionException(self.connectionErrorMessage[type(e)])
+        else:
+            raise ConnectionException(e.__str__())
+
+    # def SessionExpire(self):
+    #     self.manager.session = self.manager.GenerateSession()
+    #     raise ConnectionException(u"会话超时，请重试")
 
 
 class ConnectionException(Exception):
