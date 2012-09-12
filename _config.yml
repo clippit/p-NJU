@@ -1,0 +1,10 @@
+name: p-NJU
+author: clippit
+description: 南京大学校园网连接助手
+project_page: https://github.com/clippit/p-NJU
+latest_version: 0.2.1
+windows_download: https://github.com/downloads/clippit/p-NJU/p-NJU_0.2.1.exe
+
+markdown: rdiscount
+pygments: false
+lsi: false
