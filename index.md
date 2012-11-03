@@ -2,7 +2,9 @@
 layout: index
 ---
 
+**通知：我最近不在学校，已得知验证码策略被修改的事情，我会尽快、尽力去解决，感谢大家的支持！**
 
+* * *
 # Release Your Power of *p.nju.edu.cn*!
 
 ## 它是干什么用的？
