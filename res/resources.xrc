@@ -137,7 +137,7 @@
             <object class="wxStaticBitmap" name="captchaBitmap"/>
             <flag>wxALL</flag>
             <border>5</border>
-            <minsize>40,30</minsize>
+            <minsize>80,25</minsize>
           </object>
           <object class="sizeritem">
             <object class="wxTextCtrl" name="captchaTextCtrl"/>
