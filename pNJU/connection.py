@@ -221,7 +221,7 @@ class ConnectionManager(object):
             if remote.status != 200:
                 raise
             remoteVersion = remote.data.strip()
-            if cmp(remoteVersion.split('.'), __version__.split('.')):
+            if cmp(remoteVersion.split('.'), __version__.split('.')) > 0:
                 new = remoteVersion
             self.hasCheckedNewVersion = True
         except:
