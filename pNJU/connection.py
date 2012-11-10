@@ -19,6 +19,7 @@ class ConnectionManager(object):
             u'E012 未发现此用户!': self.handler.PasswordInvalid,
             u'E010 您输入的密码无效!': self.handler.PasswordInvalid,
             u'验证码错误!': self.handler.CaptchaInvalid,
+            u'验证码不正确!': self.handler.CaptchaInvalid,
             u'E002 您的登录数已达最大并发登录数!': self.handler.InfoSimultaneity,
             u'您已登录!': self.handler.AlreadyOnline,
             u'请重新获取IP地址!': self.handler.IpNotAllowed,
@@ -35,9 +36,16 @@ class ConnectionManager(object):
             'User-Agent': config.USER_AGENT,
             'Referer': config.URL
         }
+        # For debug, use `urllib3.poolmanager.proxy_from_url`
         self.portalConnectionPool = urllib3.connectionpool.connection_from_url(config.URL, timeout=config.CONNECTION_TIMEOUT)
         self.brasConnectionPool = urllib3.connectionpool.connection_from_url(config.BRAS_LOGIN_URL, timeout=config.CONNECTION_TIMEOUT)
         self.serviceConnectionPool = urllib3.connectionpool.connection_from_url(config.LOGIN_STATS_URL, timeout=config.CONNECTION_TIMEOUT)
+
+        self.poolTable = {
+            'portal': self.portalConnectionPool,
+            'bras': self.brasConnectionPool,
+            'service': self.serviceConnectionPool
+        }
 
     def IsOnline(self, force=False):
         return self.UpdateStatus() if force else self.online
@@ -91,7 +99,7 @@ class ConnectionManager(object):
             self.handler.ConnectionError(e)
         return self.HandleResponse(page.data.decode('utf-8'))
 
-    def DoForceOffline(self, username, password):
+    def DoForceOffline(self, username, password, captcha):
         headers = {
             'User-Agent': config.USER_AGENT,
             'Cookie': "selfservice={0}".format(self.session)
@@ -103,25 +111,22 @@ class ConnectionManager(object):
                 {
                     'login_username': username,
                     'login_password': password,
+                    'code': captcha,
                     'action': 'login'
                 },
                 headers=headers,
                 encode_multipart=False
             )
+            if self.HandleResponse(loginPage.data.decode('utf-8')[:64]) is None:
+                onlineListPage = self.brasConnectionPool.request(
+                    'GET',
+                    config.BRAS_URL,
+                    {'action': 'online'},
+                    headers=headers
+                )
         except Exception as e:
             self.handler.ConnectionError(e)
-        if len(loginPage.data) > 100:
-            raise ConnectionException(u"自助服务系统登录失败，用户名密码不正确？")
 
-        try:
-            onlineListPage = self.brasConnectionPool.request(
-                'GET',
-                config.BRAS_URL,
-                {'action': 'online'},
-                headers=headers
-            )
-        except Exception as e:
-            self.handler.ConnectionError(e)
         soup = BeautifulSoup(onlineListPage.data.decode('utf-8'), "html.parser")
         onlineInfo = soup.find_all(id=re.compile('^line(\d+)$'))
         for info in onlineInfo:
@@ -140,6 +145,7 @@ class ConnectionManager(object):
                 self.handler.ConnectionError(e)
             if u'下线成功' not in response.data.decode('utf-8'):
                 raise ConnectionException("操作未成功，请至 http://bras.nju.edu.cn 手动尝试")
+        self.online = False
         return True
 
     def HandleResponse(self, r):
@@ -153,10 +159,13 @@ class ConnectionManager(object):
         else:
             raise ConnectionException(u"未知错误：" + error)
 
-    def GetCaptchaImage(self):
-        headers = dict(self.portalHeaders, Cookie="portalservice={0}".format(self.session))
+    def GetCaptchaImage(self, captchaType):
+        headers = {
+            'User-Agent': config.USER_AGENT,
+            'Cookie': '{0}={1}'.format(captchaType.GetCookieName(), self.session)
+        }
         try:
-            image = self.portalConnectionPool.request('GET', config.IMG_URL, headers=headers)
+            image = self.poolTable[captchaType.GetName()].request('GET', captchaType.GetURL(), headers=headers)
             output = cStringIO.StringIO(image.data)
             return output
         except Exception as e:
@@ -260,7 +269,9 @@ class ConnectionHandler(object):
         raise ConnectionException(u"服务器太忙，无法响应你的请求")
 
     def ConnectionError(self, e):
-        if type(e) in self.connectionErrorMessage:
+        if isinstance(e, ConnectionException):
+            raise e
+        elif type(e) in self.connectionErrorMessage:
             raise ConnectionException(self.connectionErrorMessage[type(e)])
         else:
             raise ConnectionException(e.__str__())

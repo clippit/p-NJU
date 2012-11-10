@@ -7,6 +7,7 @@ from wx import xrc
 from . import __version__
 from userdata import Preference
 from connection import ConnectionManager, ConnectionException, CaptchaException, UpdateStatusException
+from captcha import PortalCaptcha, BrasCaptcha
 import config
 
 # Resource Directory
@@ -209,7 +210,7 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 success = self.connection.DoOnline(
                     self.pref.Get('username'),
                     self.pref.Get('password'),
-                    self.GetCaptcha()
+                    self.GetCaptcha(PortalCaptcha)
                 )
                 if success:
                     self.Notification("pNJU", u"登录成功")
@@ -267,13 +268,30 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
 
     def DoForceOffline(self):
         self.UpdateIcon(info=u"工作中...")
-        try:
-            if self.connection.DoForceOffline(self.pref.Get('username'), self.pref.Get('password')):
-                self.Notification("pNJU", u"已清除其他连接会话")
-        except ConnectionException as e:
-            self.Notification(u"pNJU 强制下线失败", e.message)
-        finally:
-            self.UpdateIcon()
+        success = False
+        while True:
+            try:
+                success = self.connection.DoForceOffline(
+                    self.pref.Get('username'),
+                    self.pref.Get('password'),
+                    self.GetCaptcha(BrasCaptcha)
+                )
+                if success:
+                    self.Notification("pNJU", u"已清除所有连接会话")
+            except CancelLoginException:
+                return
+            except CaptchaException:
+                self.Notification(u"pNJU 失败", u"验证码错误")
+                continue
+            except ConnectionException as e:
+                self.Notification(u"pNJU 强制下线失败", e.message)
+                break
+            except:
+                raise
+            else:
+                break
+        self.UpdateIcon()
+        return success
 
     def IsLoginInfoSet(self):
         "Check if username and password are set"
@@ -288,8 +306,8 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         else:
             return True
 
-    def GetCaptcha(self):
-        captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage()))
+    def GetCaptcha(self, captchaType):
+        captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage(captchaType)))
         captchaDialog = xrc.XmlResource.Get().LoadDialog(None, 'captchaDialog')
         captchaBitmap = xrc.XRCCTRL(captchaDialog, 'captchaBitmap')
         captchaBitmap.SetBitmap(captchaImage)

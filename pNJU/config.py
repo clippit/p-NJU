@@ -10,4 +10,5 @@ LOGIN_STATS_URL = "http://pnjuservice.dayanjia.com/1/login/"
 CHECK_VERSION_URL = "http://pnjuservice.dayanjia.com/version.txt"
 BRAS_LOGIN_URL = "http://bras.nju.edu.cn/selfservice/auth.html"
 BRAS_URL = "http://bras.nju.edu.cn/selfservice/"
+BRAS_IMG_URL = "http://bras.nju.edu.cn/selfservice/img.html"
 CONNECTION_TIMEOUT = 30
