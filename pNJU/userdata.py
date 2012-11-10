@@ -40,6 +40,8 @@ class Preference(object):
         self.forceRefresh = True
 
     def Get(self, name, default=None):
+        if name == 'autoRetryEnabled':
+            return False
         if not hasattr(self, 'pref') or self.forceRefresh:
             self.pref = self.ReadFile()
         if name in self.pref:
