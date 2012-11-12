@@ -60,8 +60,8 @@
             </object>
             <object class="sizeritem">
               <object class="wxCheckBox" name="autoRetryCheckBox">
-                <enabled>0</enabled>
-                <label>自动解决验证码（可能导致登录过慢）</label>
+                <label>自动解决验证码</label>
+                <checked>1</checked>
               </object>
               <option>0</option>
               <flag>wxALL</flag>

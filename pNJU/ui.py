@@ -7,7 +7,7 @@ from wx import xrc
 from . import __version__
 from userdata import Preference
 from connection import ConnectionManager, ConnectionException, CaptchaException, UpdateStatusException
-from captcha import PortalCaptcha, BrasCaptcha
+from captcha import Captcha, PortalCaptcha, BrasCaptcha
 import config
 
 # Resource Directory
@@ -167,10 +167,13 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             if not self.IsLoginInfoSet():
                 return
 
-            if self.pref.Get('autoRetryEnabled'):
-                success = self.DoOnlineAutoRetry()
-            else:
-                success = self.DoOnline()
+            success = self.DoLoginWithCaptcha(
+                connectionMethod=self.connection.DoOnline,
+                captchaType=PortalCaptcha,
+                successMessage=u"登录成功",
+                failMessage=u"pNJU 登录失败",
+                auto=self.pref.Get('autoRetryEnabled')
+            )
             if success and self.pref.Get('statisticsEnabled', True):
                 self.connection.SendOnlineStatistics()
         else:
@@ -185,7 +188,13 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             wx.YES_NO | wx.NO_DEFAULT
         )
         if confirm == wx.YES:
-            self.DoForceOffline()
+            self.DoLoginWithCaptcha(
+                connectionMethod=self.connection.DoForceOffline,
+                captchaType=BrasCaptcha,
+                successMessage=u"已清除所有连接会话",
+                failMessage=u"pNJU 强制下线失败",
+                auto=self.pref.Get('autoRetryEnabled')
+            )
 
     def OnExit(self, event):
         self.checkStatusTimer.Stop()
@@ -202,25 +211,31 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 wx.OK | wx.ICON_ERROR
             )
 
-    def DoOnline(self):
+    def DoLoginWithCaptcha(self, connectionMethod, captchaType, successMessage, failMessage, auto=False, retries=3):
         self.UpdateIcon(info=u"工作中...")
         success = False
         while True:
             try:
-                success = self.connection.DoOnline(
+                success = connectionMethod(
                     self.pref.Get('username'),
                     self.pref.Get('password'),
-                    self.GetCaptcha(PortalCaptcha)
+                    self.GetCaptcha(captchaType, auto)
                 )
                 if success:
-                    self.Notification("pNJU", u"登录成功")
+                    self.Notification("pNJU", successMessage)
             except CancelLoginException:
                 return
             except CaptchaException:
-                self.Notification(u"pNJU 登录失败", u"验证码错误")
+                if auto:
+                    retries -= 1
+                else:
+                    self.Notification(failMessage, u"验证码错误")
+                if auto and retries <= 0:
+                    auto = False
+                    self.Notification(failMessage, u"自动解决验证码失败，请手动输入")
                 continue
             except ConnectionException as e:
-                self.Notification(u"pNJU 登录失败", e.message)
+                self.Notification(failMessage, e.message)
                 break
             except:
                 raise
@@ -228,33 +243,6 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
                 break
         self.UpdateIcon()
         return success
-
-    def DoOnlineAutoRetry(self):
-        self.UpdateIcon(info=u"工作中...")
-        try:
-            self.connection.GetCaptchaImage()  # In order to send our session id to server
-        except ConnectionException as e:
-            self.Notification(u"pNJU 操作失败，请重试", e.message)
-            return False
-
-        retry = 10
-        while retry:
-            try:
-                if self.connection.DoOnline(self.pref.Get('username'), self.pref.Get('password'), retry % 10):
-                    self.Notification("pNJU", u"登录成功")
-                    self.UpdateIcon()
-                    return True
-            except CaptchaException:
-                retry = retry - 1
-                continue
-            except ConnectionException as e:
-                self.Notification(u"pNJU 登录失败", e.message)
-                self.UpdateIcon()
-                return False
-            except:
-                raise
-        # Auto retry failed if we reach here, turn to traditional method
-        return self.DoOnline()
 
     def DoOffline(self):
         self.UpdateIcon(info=u"工作中...")
@@ -265,33 +253,6 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
             self.Notification(u"pNJU 下线失败", e.message)
         finally:
             self.UpdateIcon()
-
-    def DoForceOffline(self):
-        self.UpdateIcon(info=u"工作中...")
-        success = False
-        while True:
-            try:
-                success = self.connection.DoForceOffline(
-                    self.pref.Get('username'),
-                    self.pref.Get('password'),
-                    self.GetCaptcha(BrasCaptcha)
-                )
-                if success:
-                    self.Notification("pNJU", u"已清除所有连接会话")
-            except CancelLoginException:
-                return
-            except CaptchaException:
-                self.Notification(u"pNJU 失败", u"验证码错误")
-                continue
-            except ConnectionException as e:
-                self.Notification(u"pNJU 强制下线失败", e.message)
-                break
-            except:
-                raise
-            else:
-                break
-        self.UpdateIcon()
-        return success
 
     def IsLoginInfoSet(self):
         "Check if username and password are set"
@@ -306,23 +267,30 @@ THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."""
         else:
             return True
 
-    def GetCaptcha(self, captchaType):
-        captchaImage = wx.BitmapFromImage(wx.ImageFromStream(self.connection.GetCaptchaImage(captchaType)))
-        captchaDialog = xrc.XmlResource.Get().LoadDialog(None, 'captchaDialog')
-        captchaBitmap = xrc.XRCCTRL(captchaDialog, 'captchaBitmap')
-        captchaBitmap.SetBitmap(captchaImage)
-        captchaTextCtrl = xrc.XRCCTRL(captchaDialog, 'captchaTextCtrl')
-
-        if captchaDialog.ShowModal() == wx.ID_OK:
-            captcha = captchaTextCtrl.GetValue()
-            captchaDialog.Destroy()
-            if len(captcha) == 0:
-                raise CancelLoginException
-            else:
-                return captcha
+    def GetCaptcha(self, captchaType, auto=False):
+        captchaImageStream = self.connection.GetCaptchaImage(captchaType)
+        if auto:
+            try:
+                return Captcha.Recognize(captchaImageStream)
+            except:
+                return ''
         else:
-            captchaDialog.Destroy()
-            raise CancelLoginException
+            captchaImage = wx.BitmapFromImage(wx.ImageFromStream(captchaImageStream))
+            captchaDialog = xrc.XmlResource.Get().LoadDialog(None, 'captchaDialog')
+            captchaBitmap = xrc.XRCCTRL(captchaDialog, 'captchaBitmap')
+            captchaBitmap.SetBitmap(captchaImage)
+            captchaTextCtrl = xrc.XRCCTRL(captchaDialog, 'captchaTextCtrl')
+
+            if captchaDialog.ShowModal() == wx.ID_OK:
+                captcha = captchaTextCtrl.GetValue()
+                captchaDialog.Destroy()
+                if len(captcha) == 0:
+                    raise CancelLoginException
+                else:
+                    return captcha
+            else:
+                captchaDialog.Destroy()
+                raise CancelLoginException
 
     def OnCheckStatus(self, event):
         wx.CallAfter(self.UpdateIcon, force=True)
