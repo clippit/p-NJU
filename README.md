@@ -14,6 +14,9 @@ After that, you have to install additional Python packages that p-NJU uses. It's
 
     pip install urllib3
     pip install beautifulsoup4
+    pip install PIL
+
+If you are in Windows, you can go to [PIL website](http://www.pythonware.com/products/pil/) for its binary installation to avoid compiling this library.
 
 OK, now you can run it by `python main.py` in console window. To build executable file, you need to use [PyInstaller](http://www.pyinstaller.org/).
 
